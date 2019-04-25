@@ -1,0 +1,501 @@
+%\VignetteIndexEntry{Using tinytest}
+\documentclass[11pt]{article}
+\usepackage{enumitem}
+\setlist{nosep}
+
+\usepackage{hyperref}
+
+\hypersetup{
+  pdfborder={0 0 0}
+ , colorlinks=true 
+ , urlcolor=red
+ , linkcolor=blue
+ , citecolor=blue
+}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+
+\title{Using tinytest}
+\author{Mark van der Loo}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\pkg}[1]{\textbf{#1}}
+
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1ex}
+
+
+
+\begin{document}
+\newlength{\fancyvrbtopsep}
+\newlength{\fancyvrbpartopsep}
+\makeatletter
+\FV@AddToHook{\FV@ListParameterHook}{\topsep=\fancyvrbtopsep\partopsep=\fancyvrbpartopsep}
+\makeatother
+
+
+\setlength{\fancyvrbtopsep}{0pt}
+\setlength{\fancyvrbpartopsep}{0pt}
+\maketitle{}
+
+\tableofcontents{}
+<<echo=FALSE>>=
+options(prompt="    ", continue = "    ")
+@
+
+
+\subsection*{Before you read this}
+I expect that readers of this document know how to write R functions. If you
+want to use \pkg{tinytest} for your package, I expect that you have a basic
+understanding of the directory structure that constitutes the source of an R
+package.
+
+
+\newpage{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Purpose of this package: unit testing}
+
+The purpose of \emph{unit testing} is to check whether a function gives the
+output you expect, when it is provided with certain input. So unit testing is
+all about comparing \emph{desired} outputs with \emph{realized} outputs. The
+purpose of this package is to facilitate writing, executing and analyzing unit
+tests.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Expressing tests}
+Suppose we define a function translating pounds (lbs) to kilograms inaccurately.
+<<>>=
+lbs2kg <- function(x){
+  if ( x < 0 ){
+    stop(sprintf("Expected nonnegative weight, got %g",x))
+  }
+  x/2.20
+}
+@
+We like to check a few things before we trust it.
+<<>>=
+library(tinytest)
+expect_equal(1/2.2046, lbs2kg(1))
+expect_error(lbs2kg(-3))
+@
+
+The value of an \code{expect\_*} function is a \code{logical}, with some
+attributes that record differences, if there are any. These attributes are used
+to pretty-print the results.
+<<>>=
+isTRUE( expect_true(2 == 1 + 1) )
+@
+
+
+
+\subsection{Test functions}
+Currently, the following expectations are implemented.
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Function} & \textbf{what it looks for}\\
+\code{expect\_equal(target, current)}      & exact equality\\
+\code{expect\_equivalent(target, current)} & equality, ignoring attributes\\
+\code{expect\_true(current)}               & does `current' evaluate to \code{TRUE}\\
+\code{expect\_false(current)}              & does `current' evaluate to \code{FALSE}\\
+\code{expect\_error(current, pattern)}     & error message matching \code{pattern}\\
+\code{expect\_warning(current, pattern)}   & warning message matching \code{pattern}
+\end{tabular}
+\end{center}
+Here, \code{target} is the intended outcome and current is the resulting
+outcome.  Also, \code{pattern} is interpreted as a regular expression. 
+<<>>=
+expect_error(lbs2kg(-3), pattern="nonnegative")
+expect_error(lbs2kg(-3), pattern="foo")
+@
+
+
+\subsection{Interpreting the output and print options}
+Let's have a look at an example again.
+<<>>=
+expect_false( 1 + 1 == 2 )
+@
+
+The output of these functions is pretty self-explanatory, nevertheless we see that
+the output of these expect-functions consist of
+\begin{itemize}
+\item The result: \code{FAILED} or \code{PASSED}.
+  \item The type of failure (if any) between square brackets. Current options
+       are as follows.
+  \begin{itemize}
+    \item \code{[data]} there are differences between observed and expected values.
+    \item \code{[attr]} there are differences between observed and expected attributes, such as column names.
+    \item \code{[xcpt]} an exception (warning, error) was expected but not observed. 
+  \end{itemize}
+  \item When relevant (see \S\ref{sect:testfiles}), the location of the test file and the relevant line numbers.
+  \item When necessary, a summary of the differences between observed and expected
+    values or attributes.
+  \item The test call.
+\end{itemize}
+
+The result of an \code{expect\_} function is a \code{tinytest} object. You can
+print them in long format (default) or in short, one-line format like so.
+<<>>=
+print(expect_equal(3, 1+1), type="short")
+@
+Functions that run multiple tests return an object of class \code{tinytests}
+(notice the plural). Since there may be a lot of test results, \pkg{tinytest}
+tries to be smart about printing them. The user has ultimate control over
+this behaviour. See
+<<eval=FALSE>>=
+?print.tinytests
+@
+for a full specification of the options.
+
+
+
+
+
+
+
+
+
+\section{Test files}
+\label{sect:testfiles}
+In \pkg{tinytest}, tests are scripts, interspersed with statements that perform
+checks. An example test file in tinytest can look like this.
+
+
+\begin{verbatim}
+    # contents of test_addOne.R
+
+    addOne <- function(x) x + 2
+
+    expect_true(addOne(0) > 0)
+
+    hihi <- 1
+    expect_equal(2, addOne(hihi))
+\end{verbatim}
+
+A particular file can be run using\marginpar{\code{run\_test\_file}}
+<<eval>>=
+run_test_file("test_addOne.R", verbose=FALSE)
+@
+(We use \code{verbose=FALSE} to avoid cluttering the output in this vignette.)
+The numbers between \code{<-->} indicate at what lines in the file the failing
+test can be found.
+
+
+By default only failing tests are  printed. You can store the output and print 
+all of them.
+<<>>=
+test_results <- run_test_file("test_addOne.R", verbose=FALSE)
+print(test_results, passes=TRUE)
+@
+Or you can set
+<<eval=FALSE>>=
+options(tt.pr.passes=TRUE)
+@
+to print all results during the active R session.
+
+To run all test files in a certain directory, we can use\marginpar{\code{run\_test\_dir}}
+<<eval=FALSE>>=
+run_test_dir("/path/to/your/test/directory")
+@
+By default, this will run all files of which the name starts with
+\code{test\_}, but this is customizable.
+
+
+
+\subsection{Programming over tests, ignoring test results}
+Test scripts are just R scripts intersperced with tests. The test runners make
+sure that all test results are caught, unless you tell them not to. For
+example, since the result of a test is a \code{logical} you can use them as a
+condition.
+<<eval=FALSE>>=
+if ( expect_equal(2, 1 + 1) ){
+    expect_true( 2 > 0)
+}
+@
+Here, the second test (\code{expect\_true(2 > 0)}) is only executed if the
+first test results in \code{TRUE}. In any case the result of the first test
+will be caught in the test output, when this is run with \code{run\_test\_file}
+\code{run\_test\_dir}, \code{test\_all}, \code{build\_install\_test} or through
+\code{R CMD check} using \code{test\_package}.
+
+If you want to perform the test, but not record the test result you can do the
+following \marginpar{\code{ignore}} (note the placement of the brackets).
+<<eval=TRUE>>=
+if ( ignore(expect_equal)(2, 1+1) ){
+  expect_true(2>0)
+}
+@
+Other cases where this may be useful is to perform tests in a loop, e.g. when
+there is a systematic set of cases to test.
+
+
+
+\section{Testing packages}
+
+Using \pkg{tinytest} for your package is pretty easy.
+\begin{enumerate}
+\item Testfiles are placed in \code{/inst/utst}. The testfiles all have
+names starting with \code{test} (for example \code{test\_haha.R}).
+\item In the file \code{/tests/tinytest.R} you place the code
+\begin{verbatim}
+    if ( require(tinytest, quietly=TRUE) ){
+      test_package("PACKAGENAME")
+    }
+\end{verbatim}
+\item In your \code{DESCRIPTION} file, add \pkg{tinytest} to \code{Suggests:}.
+\end{enumerate}
+
+In a terminal, you can now do
+\begin{verbatim}
+    R CMD build /path/to/your/package
+    R CMD check PACKAGENAME_X.Y.Z.tar.gz
+\end{verbatim}
+and all tests will run.
+
+To run all the tests interactively, make sure that all functions of your 
+new package are loaded. After that, run\marginpar{\code{test\_all}}
+<<eval=FALSE>>=
+test_all("/path/to/your/package")
+@
+where the default package directory is the current working directory.
+
+Alternatively, you can use\marginpar{\code{build\_install\_test}}
+<<eval=FALSE>>=
+build_install_test("/path/to/your/package")
+@
+This will build the package, install it in a temporary directory and run all te
+tests. 
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Build--install--test interactively}
+The most realistic way to unit-test your package is to build it, install it
+and then run all the test. The function
+<<eval=FALSE>>=
+  build_install_test()
+@
+does exactly that. It builds and installs the package in a temporary directory,
+starts a fresh R session, loads the newly installed package and runs all tests.
+The return value is a \code{tinytests} object.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Using data stored in files}
+\label{sect:comparefiles}
+When your package is tested with \code{test\_package}, \pkg{tinytest} ensures
+that your working directory is the testing directory (by default \code{utst}).
+This means you can files that are stored in your folder directly.
+
+Suppose that your package directory structure looks like this (default):
+\begin{itemize}
+\item[]\code{/inst}
+  \begin{itemize}
+    \item[]\code{/utst}
+    \begin{itemize}
+       \item[]\code{/test.R}
+       \item[]\code{/women.csv}
+    \end{itemize}
+  \end{itemize}
+\end{itemize}
+
+Then, to check whether the contents of \code{women.csv} is equal to the 
+built-in \code{women} dataset,  the content of \code{test.R} looks as follows.
+<<eval=FALSE>>=
+dat <- read.csv("women.csv")
+expect_equal(women, dat)
+@
+
+\textbf{Note.} This will work with \code{test\_all()} and with \code{R CMD
+check} but not with \code{run\_test\_file()} because the latter does not
+temporarily change working directory.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Skipping tests on \code{CRAN}}
+There are limits to the amount of time a test can take on CRAN. For longer
+running code it is desirable to automatically toggle these tests off on CRAN,
+but to run them during development. 
+
+You can not really skip tests at CRAN, because there is no certain way to
+detect whether a package is tested at one of the CRAN's machines. However,
+tests that are run with \code{test\_all} or \code{test\_dir} can be toggled on
+and off as follows.
+<<>>=
+if ( at_home() ){
+  expect_equal(2, 1+1)
+}
+@
+If a test file is run using \code{test\_all} or \code{test\_dir} then by
+default the code following the if-conditions is executed. It will be skipped on
+CRAN since tests are initiated with \code{test\_package} in that case.
+It is possible to switch the tests off by \code{test\_all(..., at\_home=FALSE)}
+and similar for \code{test\_dir}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Testing your package after installation}
+Supposing your package is called \pkg{hehe} and the \pkg{tinytest}
+infrastructure is used, the following commands run all of \pkg{hehe}'s
+tests.
+<<eval=FALSE>>=
+library(hehe)
+library(tinytest)
+run_test_dir( system.file("utst",package="hehe") )
+@
+This can come in handy when a user of \pkg{hehe} reports a bug and you want to
+make sure all tested functionality works on the user's system.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{A few tips on packages and unit testing}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Make your package spherical}
+
+Larger packages typically consist of a functions that are visible to the
+users of that package (exported functions) as well as a bunch of functions
+that are used by the exported functions. For example:
+
+<<>>=
+# exported, user-visible function
+inch2cm <- function(x){
+	x*conversion_factor("inch")
+}
+# not exported function, package-internal
+conversion_factor <- function(unit){
+	confac <- c(inch=2.54, pound=1/2.2056)
+  confac[unit]
+}
+@
+
+We can think of the exported functions as the \emph{surface} of your package,
+and all the other functions as the \emph{volume}. The surface is what a user
+sees, the volume is what the developer sees. The surface is how a user
+interacts with a package. 
+
+
+If the surface is small (few functions exported), users are limited in the ways
+they can interact with your package, and that means there is less to test. So
+as a rule of thumb, it is a good idea to keep the surface small. Since a sphere
+has the smallest surface-to-volume ratio possible, I refer to this rule as
+\emph{keep your package spherical}.
+
+By the way, the technical term for the surface of a package is API (application
+program interface).
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Test the surface, not the volume}
+
+Unexpected behavior (a bug) is often discovered when someone who is not the
+developer starts using code. Bugfixing implies altering code and it may even
+require you to refactor large chunks of code that is internal to a package.  If
+you defined extensive tests on non-exported functions, this means you need to
+rewrite the tests as well. As a rule of thumb, it is a good idea to test only
+the behaviour at the surface, so as a developer you have more freedom to change
+the internals. This includes rewriting and renaming internal functions completely.
+
+
+By the way, it is bad practice to change the surface, since that means you are
+going to break other people's code. Nobody likes to program against an API that
+changes frequently, and everybody hates to program against an API that changes
+unexpectedly.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{How many tests do I need?}
+When you call a function, you can think of its arguments flowing through a
+certain path from input to output. As an example, let's take a look again at a
+new, slightly safer unit conversion function.
+<<>>=
+pound2kg <- function(x){
+  stopifnot( is.numeric(x) )
+  if ( any(x < 0) ){
+    warning("Found negative input, converting to positive")
+    x <- abs(x)
+  }
+  x/2.2046
+}
+@
+If we call \code{lbs2kg} with argument \code{2}, we can write:
+\begin{verbatim}
+    2 -> /2.2046 -> output
+\end{verbatim}
+If we call \code{lbs2kg} with argument \code{-3} we can write
+\begin{verbatim}
+   -3 -> abs() -> /2.2046 -> output
+\end{verbatim}
+Finally, if we call \code{pound2kg} with \code{"foo"} we can write
+\begin{verbatim}
+   "foo" -> stop() -> Exception
+\end{verbatim}
+
+So we have three possible paths. In fact, we see that every nonnegative number
+will follow the first path, every negative number will follow the second path
+and anything nonnumeric follows the third path. So the following test suite
+fully tests the behaviour of our function.
+<<eval=FALSE>>=
+    expect_equal( 1/2.2046, pound2kg(1) )
+    # test for expected warning, store output
+    expect_warning( out <- pound2kg(-1) )
+    # test the output
+    expect_equal( 1/2.2046, out )
+    expect_error(pound2kg("foo"))
+@
+
+The number of paths of a function is called its \emph{cyclomatic complexity}.
+For larger functions, with multiple arguments, the number of paths typically
+grows extremely fast, and it quickly becomes impossible to define a test for
+each and every one of them. If you want to get an impression of how many tests
+one of your functions in needs in principle, you can have a look at the
+\pkg{cyclocomp} package of G\'abor Cs\'ardi\cite{csardi2016cyclocomp}.
+
+Since full path coverage is out of range in most cases, developers often strive
+for something simpler, namely \emph{full code coverage}. This simply means that
+each line of code is run in at least one test. Full code coverage is no
+guarantee for bugfree code. Besides code coverage it is therefore a good idea
+to think about the various ways a user might use your code and include tests
+for that.
+
+To measure code coverage, I recommend using the \pkg{covr} package by Jim
+Hester\cite{hester2018covr}. Since \pkg{covr} is independent of the tools or
+packages used for testing, it also works fine with \pkg{tinytest}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{It's not a bug, it's a test!}
+If users of your code are friendly enough to submit a bug report when they find
+one, it is a good idea to start by writing a small test that reproduces the
+error and add that to your test suite. That way, whenever you work on your
+code, you can be sure to be alarmed when a bug reappears.
+
+Tests that represent earlier bugs are sometimes called \emph{regression tests}.
+If a bug reappears during development, software engineers sometimes refer
+to this as a \emph{regression}.
+
+
+
+
+\begin{thebibliography}{5}
+  
+  \bibitem{csardi2016cyclocomp}
+    \href{https://CRAN.R-project.org/package=cyclocomp}{cyclocomp: Cyclomatic Complexity of R Code}
+    G\'abor Cs\'ardi (2016)
+    R package version 1.1.0
+
+  \bibitem{hester2018covr}
+    \href{https://CRAN.R-project.org/package=covr}{covr: Test Coverage for Packages}
+    Jim Hester (2018)
+    R package version 3.2.1
+
+\end{thebibliography}
+
+\end{document}
