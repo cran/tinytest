@@ -23,10 +23,10 @@ A character string
 Print a tinytest object
 }
 \examples{
-tt <- expect_equal(3, 1+1)
+tt <- expect_equal(1+1, 3)
 format(tt,"long")
 format(tt,"short")
-print(expect_equal(2, 1+1))
-print(expect_equal(3, 1+1), type="long")
+print(expect_equal(1+1, 2))
+print(expect_equal(1+1, 3), type="long")
 
 }

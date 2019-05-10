@@ -2,6 +2,7 @@
 % Please edit documentation in R/tinytest.R
 \name{expect_equal}
 \alias{expect_equal}
+\alias{expect_identical}
 \alias{expect_equivalent}
 \alias{expect_true}
 \alias{expect_false}
@@ -9,10 +10,11 @@
 \alias{expect_warning}
 \title{Express expectations}
 \usage{
-expect_equal(target, current, label = NA_character_,
-  tol = sqrt(.Machine$double.eps), ...)
+expect_equal(current, target, tol = sqrt(.Machine$double.eps), ...)
 
-expect_equivalent(target, current, tol = sqrt(.Machine$double.eps), ...)
+expect_identical(current, target)
+
+expect_equivalent(current, target, tol = sqrt(.Machine$double.eps), ...)
 
 expect_true(current)
 
@@ -23,11 +25,9 @@ expect_error(current, pattern = ".*")
 expect_warning(current, pattern = ".*")
 }
 \arguments{
-\item{target}{\code{[R object or expression]} Expected outcome}
-
 \item{current}{\code{[R object or expression]} Outcome or expression under scrutiny.}
 
-\item{label}{\code{[character]} A label or description.}
+\item{target}{\code{[R object or expression]} Expected outcome}
 
 \item{tol}{\code{[numeric]} Test equality to machine rounding. Passed 
 to \code{\link[base]{all.equal} (tolerance)}}
@@ -45,8 +45,14 @@ test that was run
 Express expectations
 }
 \details{
-\code{expect_equivalent} is calls \code{expect_equal} with the extra
+\code{expect_equivalent} calls \code{expect_equal} with the extra
 arguments \code{check.attributes=FALSE} and \code{use.names=FALSE}
+}
+\note{
+Each \code{expect_haha} function can also be called as \code{checktHaha}.
+Although the interface is not entirely the same, it is expected that
+this makes migration from the \code{RUnit} framework a little easier, for those
+who wish to do so.
 }
 \examples{
 expect_equal(1 + 1, 2)       # TRUE

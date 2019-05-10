@@ -23,8 +23,6 @@ tinytest(result, call, diff = NA_character_, short = NA_character_,
 
 \item{lst}{\code{[integer]} Last line number in the test file (differs
 from \code{fst} if the call spans multiple lines).}
-
-\item{label}{\code{[character]} a user-defined label.}
 }
 \value{
 A \code{tinytest} object.
@@ -36,7 +34,7 @@ it is endowed with attributes allowing to trace back where the test
 was run.
 }
 \examples{
-tt <- expect_equal(2, 1+1)
+tt <- expect_equal(1+1, 2)
 if (isTRUE(tt)){ 
   print("w00p w00p!") 
 } else { 

@@ -5,11 +5,11 @@
 \alias{test_all}
 \title{Run all tests in a directory}
 \usage{
-run_test_dir(dir = "inst/utst", pattern = "^test.*\\\\.[rR]",
+run_test_dir(dir = "inst/tinytest", pattern = "^test.*\\\\.[rR]",
   at_home = TRUE, verbose = getOption("tt.verbose", TRUE),
   color = getOption("tt.pr.color", TRUE))
 
-test_all(pkgdir = "./", testdir = "inst/utst", ...)
+test_all(pkgdir = "./", testdir = "inst/tinytest", ...)
 }
 \arguments{
 \item{dir}{\code{[character]} path to directory}
@@ -40,7 +40,7 @@ A \code{tinytests} object
 
 \code{test_all} is a convenience function for package development, that wraps
 \code{run_test_dir}. By default, it runs all files starting with
-\code{test} in \code{./inst/utst/}.  It is assumed that all functions to be
+\code{test} in \code{./inst/tinytest/}.  It is assumed that all functions to be
 tested are loaded.
 }
 \examples{
@@ -63,8 +63,9 @@ dat <- as.data.frame(out)
 
 }
 \seealso{
-Other test-files: \code{\link{[.tinytests}},
-  \code{\link{build_install_test}},
-  \code{\link{run_test_file}}, \code{\link{test_package}}
+Other test-files: \code{\link{build_install_test}},
+  \code{\link{run_test_file}},
+  \code{\link{summary.tinytests}},
+  \code{\link{test_package}}
 }
 \concept{test-files}

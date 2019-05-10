@@ -4,8 +4,9 @@
 \alias{build_install_test}
 \title{build, install and test}
 \usage{
-build_install_test(pkgdir = "./", testdir = "utst", at_home = TRUE,
-  verbose = getOption("tt.verbose", TRUE), keep_tempdir = FALSE)
+build_install_test(pkgdir = "./", testdir = "tinytest",
+  at_home = TRUE, verbose = getOption("tt.verbose", TRUE),
+  keep_tempdir = FALSE)
 }
 \arguments{
 \item{pkgdir}{\code{[character]} Package directory}
@@ -40,8 +41,9 @@ function to work the following system requirements are necessary.
 }
 }
 \seealso{
-Other test-files: \code{\link{[.tinytests}},
-  \code{\link{run_test_dir}}, \code{\link{run_test_file}},
+Other test-files: \code{\link{run_test_dir}},
+  \code{\link{run_test_file}},
+  \code{\link{summary.tinytests}},
   \code{\link{test_package}}
 }
 \concept{test-files}

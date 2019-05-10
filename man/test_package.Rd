@@ -4,7 +4,7 @@
 \alias{test_package}
 \title{Test a package during R CMD check}
 \usage{
-test_package(pkgname, testdir = "utst")
+test_package(pkgname, testdir = "tinytest")
 }
 \arguments{
 \item{pkgname}{\code{[character]} scalar. Name of the package}
@@ -26,8 +26,8 @@ for that.)
 }
 }
 \seealso{
-Other test-files: \code{\link{[.tinytests}},
-  \code{\link{build_install_test}},
-  \code{\link{run_test_dir}}, \code{\link{run_test_file}}
+Other test-files: \code{\link{build_install_test}},
+  \code{\link{run_test_dir}}, \code{\link{run_test_file}},
+  \code{\link{summary.tinytests}}
 }
 \concept{test-files}

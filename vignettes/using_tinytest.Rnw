@@ -42,7 +42,7 @@
 
 \tableofcontents{}
 <<echo=FALSE>>=
-options(prompt="    ", continue = "    ")
+options(prompt="R>  ", continue = "    ")
 @
 
 
@@ -79,7 +79,7 @@ lbs2kg <- function(x){
 We like to check a few things before we trust it.
 <<>>=
 library(tinytest)
-expect_equal(1/2.2046, lbs2kg(1))
+expect_equal(lbs2kg(1), 1/2.2046)
 expect_error(lbs2kg(-3))
 @
 
@@ -97,20 +97,29 @@ Currently, the following expectations are implemented.
 \begin{center}
 \begin{tabular}{ll}
 \textbf{Function} & \textbf{what it looks for}\\
-\code{expect\_equal(target, current)}      & exact equality\\
-\code{expect\_equivalent(target, current)} & equality, ignoring attributes\\
+\code{expect\_equal(current, target)}      & equality (using \code{all.equal})\\
+\code{expect\_equivalent(current, target)} & equality, ignoring attributes\\
+\code{expect\_identical(current, target)}  & equality, (using, \code{identical})\\
 \code{expect\_true(current)}               & does `current' evaluate to \code{TRUE}\\
 \code{expect\_false(current)}              & does `current' evaluate to \code{FALSE}\\
 \code{expect\_error(current, pattern)}     & error message matching \code{pattern}\\
 \code{expect\_warning(current, pattern)}   & warning message matching \code{pattern}
 \end{tabular}
 \end{center}
-Here, \code{target} is the intended outcome and current is the resulting
-outcome.  Also, \code{pattern} is interpreted as a regular expression. 
+Here, \code{target} is the intended outcome and \code{current} is the observed
+outcome. Also, \code{pattern} is interpreted as a regular expression. 
 <<>>=
 expect_error(lbs2kg(-3), pattern="nonnegative")
 expect_error(lbs2kg(-3), pattern="foo")
 @
+
+
+\subsection{Alternative syntax}
+The syntax of the test functions should be familiar to users of the
+\code{testthat} package\cite{wickham2016testthat}. In test files only, you can
+use equivalent functions in the style of \code{RUnit}\cite{burger2016RUnit}. To
+be precise, for each function of the form \code{expect\_lol} there is a
+function of the form \code{expectLol}.
 
 
 \subsection{Interpreting the output and print options}
@@ -139,8 +148,9 @@ the output of these expect-functions consist of
 The result of an \code{expect\_} function is a \code{tinytest} object. You can
 print them in long format (default) or in short, one-line format like so.
 <<>>=
-print(expect_equal(3, 1+1), type="short")
+print(expect_equal(1+1, 3), type="short")
 @
+\marginpar{\scriptsize{\code{print} method}}
 Functions that run multiple tests return an object of class \code{tinytests}
 (notice the plural). Since there may be a lot of test results, \pkg{tinytest}
 tries to be smart about printing them. The user has ultimate control over
@@ -149,11 +159,6 @@ this behaviour. See
 ?print.tinytests
 @
 for a full specification of the options.
-
-
-
-
-
 
 
 
@@ -172,18 +177,23 @@ checks. An example test file in tinytest can look like this.
     expect_true(addOne(0) > 0)
 
     hihi <- 1
-    expect_equal(2, addOne(hihi))
+    expect_equal(addOne(hihi), 2)
 \end{verbatim}
 
-A particular file can be run using\marginpar{\code{run\_test\_file}}
+A particular file can be run using\marginpar{\scriptsize\code{run\_test\_file}}
 <<eval>>=
 run_test_file("test_addOne.R", verbose=FALSE)
 @
-(We use \code{verbose=FALSE} to avoid cluttering the output in this vignette.)
+We use \code{verbose=FALSE} to avoid cluttering the output in this vignette.
+By default, verbosity is turned on, and a colorized counter is shown while
+tests are run. It shows number of tests uncolored, number of failures in red
+and number of passes in green. If you work with a terminal that does not
+support ANSI color codes, or if you are uncomfortable reading these colors, use
+\code{color=FALSE} or set \code{options(tt.pr.color=FALSE)}.
+
+
 The numbers between \code{<-->} indicate at what lines in the file the failing
 test can be found.
-
-
 By default only failing tests are  printed. You can store the output and print 
 all of them.
 <<>>=
@@ -203,6 +213,25 @@ run_test_dir("/path/to/your/test/directory")
 By default, this will run all files of which the name starts with
 \code{test\_}, but this is customizable.
 
+\subsection{Summarizing test results, getting the data}
+To create some results, run the tests in this package.
+<<>>=
+out <- run_test_dir(system.file("tinytest", package="tinytest")
+       , verbose=FALSE)
+
+@
+The results can be turned into data using \code{as.data.frame}.
+\marginpar{\scriptsize{\code{as.data.frame}}}.
+<<>>=
+head(as.data.frame(out), 3)
+@
+The last two columns indicate the line numbers where the test was defined.
+
+A `summary` of the output gives a table with passes and fails per file.
+<<>>=
+summary(out)
+@
+
 
 
 \subsection{Programming over tests, ignoring test results}
@@ -211,7 +240,7 @@ sure that all test results are caught, unless you tell them not to. For
 example, since the result of a test is a \code{logical} you can use them as a
 condition.
 <<eval=FALSE>>=
-if ( expect_equal(2, 1 + 1) ){
+if ( expect_equal(1 + 1, 2) ){
     expect_true( 2 > 0)
 }
 @
@@ -224,7 +253,7 @@ will be caught in the test output, when this is run with \code{run\_test\_file}
 If you want to perform the test, but not record the test result you can do the
 following \marginpar{\code{ignore}} (note the placement of the brackets).
 <<eval=TRUE>>=
-if ( ignore(expect_equal)(2, 1+1) ){
+if ( ignore(expect_equal)(1+1, 2) ){
   expect_true(2>0)
 }
 @
@@ -237,7 +266,7 @@ there is a systematic set of cases to test.
 
 Using \pkg{tinytest} for your package is pretty easy.
 \begin{enumerate}
-\item Testfiles are placed in \code{/inst/utst}. The testfiles all have
+\item Testfiles are placed in \code{/inst/tinytest}. The testfiles all have
 names starting with \code{test} (for example \code{test\_haha.R}).
 \item In the file \code{/tests/tinytest.R} you place the code
 \begin{verbatim}
@@ -288,14 +317,14 @@ The return value is a \code{tinytests} object.
 \subsection{Using data stored in files}
 \label{sect:comparefiles}
 When your package is tested with \code{test\_package}, \pkg{tinytest} ensures
-that your working directory is the testing directory (by default \code{utst}).
+that your working directory is the testing directory (by default \code{tinytest}).
 This means you can files that are stored in your folder directly.
 
 Suppose that your package directory structure looks like this (default):
 \begin{itemize}
 \item[]\code{/inst}
   \begin{itemize}
-    \item[]\code{/utst}
+    \item[]\code{/tinytest}
     \begin{itemize}
        \item[]\code{/test.R}
        \item[]\code{/women.csv}
@@ -307,7 +336,7 @@ Then, to check whether the contents of \code{women.csv} is equal to the
 built-in \code{women} dataset,  the content of \code{test.R} looks as follows.
 <<eval=FALSE>>=
 dat <- read.csv("women.csv")
-expect_equal(women, dat)
+expect_equal(dat, women)
 @
 
 \textbf{Note.} This will work with \code{test\_all()} and with \code{R CMD
@@ -345,7 +374,7 @@ tests.
 <<eval=FALSE>>=
 library(hehe)
 library(tinytest)
-run_test_dir( system.file("utst",package="hehe") )
+run_test_dir( system.file("tinytest",package="hehe") )
 @
 This can come in handy when a user of \pkg{hehe} reports a bug and you want to
 make sure all tested functionality works on the user's system.
@@ -443,11 +472,11 @@ will follow the first path, every negative number will follow the second path
 and anything nonnumeric follows the third path. So the following test suite
 fully tests the behaviour of our function.
 <<eval=FALSE>>=
-    expect_equal( 1/2.2046, pound2kg(1) )
+    expect_equal(pound2kg(1), 1/2.2046  )
     # test for expected warning, store output
     expect_warning( out <- pound2kg(-1) )
     # test the output
-    expect_equal( 1/2.2046, out )
+    expect_equal( out, 1/2.2046)
     expect_error(pound2kg("foo"))
 @
 
@@ -485,9 +514,20 @@ to this as a \emph{regression}.
 
 
 \begin{thebibliography}{5}
-  
+  \bibitem{wickham2016testthat}
+    \href{https://cran.r-project.org/package=testthat}{Unit Testing for R}
+    Hadley Wickham (2016). testthat: Get Started with Testing. The R Journal,
+    vol. 3, no. 1, pp. 5--10, 2011
+
+  \bibitem{burger2016RUnit}
+  Matthias Burger, Klaus Juenemann and Thomas Koenig (2018). 
+  \href{https://CRAN.R-project.org/package=RUnit}{RUnit: R Unit Test Framework}
+  R package version 0.4.32.
+
+
+
   \bibitem{csardi2016cyclocomp}
-    \href{https://CRAN.R-project.org/package=cyclocomp}{cyclocomp: Cyclomatic Complexity of R Code}
+    \href{https://cran.r-project.org/package=cyclocomp}{cyclocomp: cyclomatic complexity of r code}
     G\'abor Cs\'ardi (2016)
     R package version 1.1.0
 

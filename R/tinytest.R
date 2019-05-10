@@ -21,7 +21,6 @@ isFALSE <- function(x){
 #'
 #' @param result \code{[logical]} scalar.
 #' @param call   \code{[call]} The call that created \code{result}.
-#' @param label  \code{[character]} a user-defined label.
 #' @param diff   \code{[character]} difference between current and target value
 #'     (if any).
 #' @param short  \code{[character]} short description of the difference
@@ -34,7 +33,7 @@ isFALSE <- function(x){
 #'
 #'
 #' @examples
-#' tt <- expect_equal(2, 1+1)
+#' tt <- expect_equal(1+1, 2)
 #' if (isTRUE(tt)){ 
 #'   print("w00p w00p!") 
 #' } else { 
@@ -85,7 +84,7 @@ lineformat <- function(x){
 #' @export
 #' 
 #' @examples
-#' tt <- expect_equal(3, 1+1)
+#' tt <- expect_equal(1+1, 3)
 #' format(tt,"long")
 #' format(tt,"short")
 format.tinytest <- function(x,type=c("long","short"), ...){
@@ -122,8 +121,8 @@ format.tinytest <- function(x,type=c("long","short"), ...){
 #' @param ... passed to \code{\link{format.tinytest}}
 #' 
 #' @examples
-#' print(expect_equal(2, 1+1))
-#' print(expect_equal(3, 1+1), type="long")
+#' print(expect_equal(1+1, 2))
+#' print(expect_equal(1+1, 3), type="long")
 #' 
 #' @export
 print.tinytest <- function(x,...){
@@ -135,7 +134,6 @@ print.tinytest <- function(x,...){
 #'  
 #' @param current \code{[R object or expression]} Outcome or expression under scrutiny.
 #' @param target \code{[R object or expression]} Expected outcome
-#' @param label \code{[character]} A label or description.
 #' @param tol \code{[numeric]} Test equality to machine rounding. Passed 
 #'     to \code{\link[base]{all.equal} (tolerance)}
 #' @param ... Passed to \code{all.equal}
@@ -143,6 +141,12 @@ print.tinytest <- function(x,...){
 #' @return A \code{\link{tinytest}} object. A tinytest object is a
 #' \code{logical} with attributes holding information about the 
 #' test that was run
+#' 
+#' @note
+#' Each \code{expect_haha} function can also be called as \code{checktHaha}.
+#' Although the interface is not entirely the same, it is expected that
+#' this makes migration from the \code{RUnit} framework a little easier, for those
+#' who wish to do so.
 #' 
 #' @family test-functions
 #' 
@@ -153,20 +157,32 @@ print.tinytest <- function(x,...){
 #' expect_equal(2, c(x=2))      # FALSE
 #'
 #' @export
-expect_equal <- function(target, current, label=NA_character_
-                       , tol = sqrt(.Machine$double.eps), ...){
+expect_equal <- function(current, target, tol = sqrt(.Machine$double.eps), ...){
 
-  check <- all.equal(target,current,...)
+  check <- all.equal(current, target,...)
   equal <- isTRUE(check)
   diff  <- if (equal) NA_character_ else paste0(" ", check,collapse="\n")
-  short <- if(equal) NA_character_ else shortdiff(target, current, tolerance=tol)
+  short <- if(equal) NA_character_ else shortdiff(current, target, tolerance=tol)
   
   tinytest(result = equal, call = sys.call(sys.parent(1)), diff=diff, short=short)
 }
 
+
+#' @rdname expect_equal
+#' @export 
+expect_identical <- function(current, target){
+  result <- identical(current, target)
+  diff <-  if (result) NA_character_ 
+           else paste(" ", all.equal(current, target), collapse="\n")
+  short <- if (result) NA_character_ 
+           else shortdiff(current, target, tolerance=0)
+  tinytest(result=result, call=sys.call(sys.parent(1)), diff=diff, short=short)
+}
+
+
 # are there differences in data and/or attributes, or just in the attributes?
-shortdiff <- function(target, current, ...){
-  equivalent_data <- all.equal(target, current
+shortdiff <- function(current, target, ...){
+  equivalent_data <- all.equal(current, target
                        , check_attributes=FALSE
                        , use.names=FALSE,...)
   if (isTRUE(equivalent_data)) "attr"
@@ -175,14 +191,14 @@ shortdiff <- function(target, current, ...){
 
 
 #' @details 
-#' \code{expect_equivalent} is calls \code{expect_equal} with the extra
+#' \code{expect_equivalent} calls \code{expect_equal} with the extra
 #' arguments \code{check.attributes=FALSE} and \code{use.names=FALSE}
 #' 
 #' 
 #' @rdname expect_equal
 #' @export
-expect_equivalent <- function(target, current, tol = sqrt(.Machine$double.eps), ...){
-  out <- expect_equal(target, current, check.attributes=FALSE,use.names=FALSE,...)
+expect_equivalent <- function(current, target, tol = sqrt(.Machine$double.eps), ...){
+  out <- expect_equal(current, target, check.attributes=FALSE,use.names=FALSE,...)
   attr(out, 'call') <- sys.call(sys.parent(1))
   out
 }
@@ -308,6 +324,17 @@ capture <- function(fun, env){
 }
 
 
+# RUnit style checking functions expect_xfoo -> checkXfoo 
+add_RUnit_style <- function(e){
+  fns <- ls(e, pattern="^expect_")
+  # snake to camelCase
+  fns_RUnit <- sub("_(.)", "\\U\\1", fns, perl=TRUE)
+  fns_RUnit <- sub("expect","check",fns_RUnit)
+  # add checkHaha for each expect_hihi (lol no for each expect_haha)
+  for (i in seq_along(fns)) assign(fns_RUnit[i], e[[fns[i]]], envir=e)
+}
+
+
 #' Ignore the output of an expectation
 #'
 #' Ignored expectations are not reported in the test results.
@@ -413,6 +440,10 @@ run_test_file <- function( file, at_home=TRUE
   e$expect_false      <- capture(expect_false, o)
   e$expect_warning    <- capture(expect_warning, o)
   e$expect_error      <- capture(expect_error, o)
+  e$expect_identical  <- capture(expect_identical, o)
+
+  if ( getOption("tt.RUnitStyle", TRUE) ) add_RUnit_style(e)
+  
 
   catf <- function(fmt,...) if (verbose) cat(sprintf(fmt,...))
 
@@ -491,7 +522,7 @@ run_test_file <- function( file, at_home=TRUE
 #' @family test-files
 #'
 #' @export
-run_test_dir <- function(dir="inst/utst", pattern="^test.*\\.[rR]"
+run_test_dir <- function(dir="inst/tinytest", pattern="^test.*\\.[rR]"
                        , at_home = TRUE
                        , verbose = getOption("tt.verbose",TRUE)
                        , color   = getOption("tt.pr.color",TRUE) ){
@@ -514,7 +545,7 @@ run_test_dir <- function(dir="inst/utst", pattern="^test.*\\.[rR]"
 #' 
 #' \code{test_all} is a convenience function for package development, that wraps
 #' \code{run_test_dir}. By default, it runs all files starting with
-#' \code{test} in \code{./inst/utst/}.  It is assumed that all functions to be
+#' \code{test} in \code{./inst/tinytest/}.  It is assumed that all functions to be
 #' tested are loaded.
 #' 
 #' 
@@ -526,7 +557,7 @@ run_test_dir <- function(dir="inst/utst", pattern="^test.*\\.[rR]"
 #' 
 #' @rdname run_test_dir
 #' @export
-test_all <- function(pkgdir="./", testdir="inst/utst", ...){
+test_all <- function(pkgdir="./", testdir="inst/tinytest", ...){
   run_test_dir( file.path(pkgdir,testdir), ...)
 }
 
@@ -566,7 +597,7 @@ at_home <- function(){
 #'   if (require(tinytest)) test_package("your package name")
 #' }
 #' @export
-test_package <- function(pkgname, testdir = "utst"){
+test_package <- function(pkgname, testdir = "tinytest"){
   oldwd <- getwd()
   on.exit(setwd(oldwd))
 
@@ -614,7 +645,7 @@ test_package <- function(pkgname, testdir = "utst"){
 #' }
 #' @family test-files
 #' @export
-build_install_test <- function(pkgdir="./", testdir="utst"
+build_install_test <- function(pkgdir="./", testdir="tinytest"
                              , at_home=TRUE
                              , verbose=getOption("tt.verbose",TRUE)
                              , keep_tempdir=FALSE){
@@ -664,118 +695,6 @@ saveRDS(out, file='output.RDS')
 
   readRDS(file.path(tdir, "output.RDS"))
 
-}
-
-
-#' Tinytests object
-#'
-#' An object of class \code{tinytests} (note: plural) results
-#' from running multiple tests from script. E.g. by running
-#' \code{\link{run_test_file}}.
-#'
-#'
-#' @param i an index
-#' @param x a \code{tinytests} object 
-#'
-#' @return For \code{[.tinytests} another, smaller \code{tinytests} object.
-#'
-#' @export
-#' @rdname tinytests
-`[.tinytests` <- function(x,i){
-   structure(unclass(x)[i], class="tinytests")
-}
-
-#' @param passes \code{[logical]} Toggle: print passing tests?
-#' @param limit \code{[numeric]} Max number of results to print
-#' @param nlong \code{[numeric]} First \code{nlong} results are printed in long format.
-#' @param ... passed to \code{\link{format.tinytest}}
-#'
-#' @section Details:
-#'
-#' By default, the first 3 failing test results are printed in long form,
-#' the next 7 failing test results are printed in short form and all other 
-#' failing tests are not printed. These defaults can be changed by passing options
-#' to  \code{print.tinytest}, or by setting one or more of the following general
-#' options:
-#' \itemize{
-#' \item{\code{tt.pr.passes} Set to \code{TRUE} to print output of non-failing tests.}
-#' \item{\code{tt.pr.limit} Max number of results to print (e.g. \code{Inf})}
-#' \item{\code{tt.pr.nlong} The number of results to print in long format (e.g. \code{Inf}).}
-#' }
-#'
-#' For example, set \code{options(tt.pr.limit=Inf)} to print all test results.
-#' 
-#' @rdname tinytests 
-#' @export
-print.tinytests <- function(x
-  , passes=getOption("tt.pr.passes", FALSE)
-  , limit =getOption("tt.pr.limit",  7)
-  , nlong =getOption("tt.pr.nlong",  3),...){
-
-  ntst  <- length(x)
-  ifail <- if (ntst > 0) sapply(x, isFALSE) else logical(0)
-  
-  if (!passes){
-    x <- x[ifail]
-    if ( length(x) == 0 ){
-      cat(sprintf("All ok (%d results)\n", ntst))
-      return(invisible(NULL))
-    }
-  }
-  limit <- min(length(x), limit)
-  nlong <- min(nlong, limit)
-  nshort <- max(limit - nlong,0)
-  x <- x[seq_len(limit)]
-  type <- c( rep("long",nlong)
-           , rep("short",nshort) )
-
-  str <- sapply(seq_along(x), function(i) format.tinytest(x[[i]], type=type[i]))  
-  cat(paste0(str,"\n"), "\n")
-  if (ntst > length(str)){
-    cat(sprintf("Showing %d out of %d test results; %d tests failed\n"
-        , length(x), ntst, sum(ifail)))
-  } 
-}
-
-
-#' @return For \code{as.data.frame.} a data frame.
-#' @family test-files
-#'
-#' @examples
-#' # create a test file in tempdir
-#' tests <- "
-#' addOne <- function(x) x + 2
-#'
-#' expect_true(addOne(0) > 0)
-#' expect_equal(2, addOne(1))
-#' "
-#' testfile <- tempfile(pattern="test_", fileext=".R")
-#' write(tests, testfile)
-#' 
-#' # extract testdir
-#' testdir <- dirname(testfile)
-#' # run all files starting with 'test' in testdir
-#' out <- run_test_dir(testdir)
-#' #
-#' # print results
-#' print(out)
-#' dat <- as.data.frame(out)
-#' out[1]
-#' 
-#' @rdname tinytests
-#' @export
-as.data.frame.tinytests <- function(x, ...){
-  L <- lapply(x, attributes)
-  data.frame(
-      result = sapply(x, isTRUE)
-    , call   = sapply(L, function(y) capture.output(print(y$call)))
-    , diff   = sapply(L, `[[`, "diff")
-    , short  = sapply(L, `[[`, "short")
-    , file   = sapply(L, `[[`, "file")
-    , first  = sapply(L, `[[`, "fst")
-    , last   = sapply(L, `[[`, "lst")
-    , stringsAsFactors=FALSE
-  )
 }
 
 

@@ -55,8 +55,9 @@ print(out, nlong=0, passes=TRUE)
 
 }
 \seealso{
-Other test-files: \code{\link{[.tinytests}},
-  \code{\link{build_install_test}},
-  \code{\link{run_test_dir}}, \code{\link{test_package}}
+Other test-files: \code{\link{build_install_test}},
+  \code{\link{run_test_dir}},
+  \code{\link{summary.tinytests}},
+  \code{\link{test_package}}
 }
 \concept{test-files}

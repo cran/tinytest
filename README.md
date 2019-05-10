@@ -5,7 +5,7 @@
 
 I assume that `pkg` is your package directory.
 
-1. Put files with names starting with `test` in `pkg/inst/utst`, e.g. `test_haha.R`. Test files are normal
+1. Put files with names starting with `test` in `pkg/inst/tinytest`, e.g. `test_haha.R`. Test files are normal
    R scripts, interspersed with test commands, such as `expect_equal(0, myfunc(1))`.
 2. Put a file named `tinytest.R` in `pkg/tests` and give it the following contents.
 ```
@@ -43,8 +43,9 @@ terminal.
 
 #### Test functions
 
-The syntax of test functions closely resembles that of [testthat](https://CRAN.R-project.org/package=testthat). The main difference is that the first argument is the _desired_, and the
-second argument is the _current_ value.
+The syntax of test functions resembles that of [testthat](https://CRAN.R-project.org/package=testthat). 
+For expectations comparing two results, the first argument represents the _observed_ value while
+the second argument represents the _desired_ value.
 
 |Function                     | description                                   |
 |-----------------------------|-----------------------------------------------|
@@ -52,8 +53,14 @@ second argument is the _current_ value.
 | `expect_false`              | Argument must evaluate to `FALSE`             |
 | `expect_equal`              | Data and attributes of arguments must be equal|
 | `expect_equivalent`         | Data of arguments must be equal               |
+| `expect_identical`          | Target and current mustbe `identical`         |
 | `expect_warning`            | Expression must yield a warning               |
 | `expect_error`              | Expression must yield an error                |
+
+
+For tests in a script there is an alternative syntax in the style of 
+[RUnit](https://CRAN.R-project.org/package=RUnit). For each function of the
+form `expect_lol` there is a function of the form `expectLol`.
 
 
 #### Print options
@@ -88,7 +95,7 @@ For a package called `haha` that is tested using `tinytest`, any user that has
 ```
 library(haha)
 library(tinytest)
-run_test_dir( system.file("utst",package="haha") )
+run_test_dir( system.file("tinytest",package="haha") )
 ```
 
 #### Skipping or ignoring tests 
@@ -115,7 +122,7 @@ if ( at_home() ){
 
 #### Comparing with data stored on file
 
-Data can be loaded from `pkg/inst/utst` (or subdirectories). A simple
+Data can be loaded from `pkg/inst/tinytest` (or subdirectories). A simple
 test file might look like this.
 
 ```
