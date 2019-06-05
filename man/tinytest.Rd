@@ -35,10 +35,10 @@ was run.
 }
 \examples{
 tt <- expect_equal(1+1, 2)
-if (isTRUE(tt)){ 
-  print("w00p w00p!") 
-} else { 
-  print("Oh no!") 
+if (isTRUE(tt)){
+  print("w00p w00p!")
+} else {
+  print("Oh no!")
 }
 
 

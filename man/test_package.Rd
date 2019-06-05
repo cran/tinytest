@@ -4,28 +4,42 @@
 \alias{test_package}
 \title{Test a package during R CMD check}
 \usage{
-test_package(pkgname, testdir = "tinytest")
+test_package(pkgname, testdir = "tinytest", at_home = FALSE, ...)
 }
 \arguments{
 \item{pkgname}{\code{[character]} scalar. Name of the package}
 
 \item{testdir}{\code{[character]} scalar. Path to installed directory, relative
 to the working directory of \code{R CMD check}.}
+
+\item{at_home}{\code{[logical]} scalar. Are we at home? (see Details)}
+
+\item{...}{extra arguments, passed to \code{\link{run_test_dir}}}
 }
 \description{
 Run all tests in a package. Throw an error and print all failed test
 results when one or more tests fail. This function is intended to be
 used with \code{R CMD check} and not for interactive use (use \code{\link{test_all}}
-for that.)
+or \code{\link{build_install_test}} instead). Tests that are only run 
+\code{\link{at_home}} are skipped by default (as if it was run on CRAN).
 }
+\section{Details}{
+
+We set \code{at_home=FALSE} by default so \code{R CMD check} will run the same
+as at CRAN.
+}
+
 \examples{
 \dontrun{
 # Create a file with the following content, to use
 # tinytest as your unit testing framework:
-  if (require(tinytest)) test_package("your package name")
+  if (requireNamespace("tinytest", quietly=TRUE))
+    test_package("your package name")
 }
 }
 \seealso{
+\code{\link{setup_tinytest}}
+
 Other test-files: \code{\link{build_install_test}},
   \code{\link{run_test_dir}}, \code{\link{run_test_file}},
   \code{\link{summary.tinytests}}

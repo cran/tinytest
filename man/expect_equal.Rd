@@ -29,7 +29,7 @@ expect_warning(current, pattern = ".*")
 
 \item{target}{\code{[R object or expression]} Expected outcome}
 
-\item{tol}{\code{[numeric]} Test equality to machine rounding. Passed 
+\item{tol}{\code{[numeric]} Test equality to machine rounding. Passed
 to \code{\link[base]{all.equal} (tolerance)}}
 
 \item{...}{Passed to \code{all.equal}}
@@ -38,7 +38,7 @@ to \code{\link[base]{all.equal} (tolerance)}}
 }
 \value{
 A \code{\link{tinytest}} object. A tinytest object is a
-\code{logical} with attributes holding information about the 
+\code{logical} with attributes holding information about the
 test that was run
 }
 \description{
@@ -49,7 +49,7 @@ Express expectations
 arguments \code{check.attributes=FALSE} and \code{use.names=FALSE}
 }
 \note{
-Each \code{expect_haha} function can also be called as \code{checktHaha}.
+Each \code{expect_haha} function can also be called as \code{checkHaha}.
 Although the interface is not entirely the same, it is expected that
 this makes migration from the \code{RUnit} framework a little easier, for those
 who wish to do so.

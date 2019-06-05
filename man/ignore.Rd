@@ -19,7 +19,7 @@ at the commandline. See also the \href{../docs/using_tinytest.pdf}{vignette}.
 }
 \examples{
 \donttest{
-   ## The result of 'expect_warning' is not stored in the test result when 
+   ## The result of 'expect_warning' is not stored in the test result when
    ## this is run from a file.
    expect_true( ignore(expect_warning)(warning("foo!")) )
    ## Note the placement of the brackets in ignore(expect_warning)(...).

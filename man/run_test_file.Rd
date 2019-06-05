@@ -5,7 +5,8 @@
 \title{Run an R file containing tests; gather results}
 \usage{
 run_test_file(file, at_home = TRUE, verbose = getOption("tt.verbose",
-  TRUE), color = getOption("tt.pr.color", TRUE))
+  TRUE), color = getOption("tt.pr.color", TRUE),
+  remove_side_effects = TRUE)
 }
 \arguments{
 \item{file}{\code{[character]} File location of a .R file.}
@@ -15,9 +16,11 @@ run_test_file(file, at_home = TRUE, verbose = getOption("tt.verbose",
 \item{verbose}{\code{[logical]} toggle verbosity during execution}
 
 \item{color}{\code{[logical]} toggle colorize counts in verbose mode (see Note)}
+
+\item{remove_side_effects}{\code{[logical]} toggle remove user-defined side effects? See section on side effects.}
 }
 \value{
-A \code{list} of class \code{tinytests}, which is a list 
+A \code{list} of class \code{tinytests}, which is a list
    of \code{\link{tinytest}} objects.
 }
 \description{
@@ -25,17 +28,24 @@ Run an R file containing tests; gather results
 }
 \details{
 In \pkg{tinytest}, a test file is just an R script where some or all
-of the statements express an \code{\link[=expect_equal]{expectation}}. 
+of the statements express an \code{\link[=expect_equal]{expectation}}.
 \code{run_test_file} runs the file while gathering results of the
-expectations in a data frame.
+expectations in a \code{\link{tinytests}} object.
 }
 \note{
 Not all terminals support ansi escape characters, so colorized output can be
 switched off. This can also be done globally by setting \code{options(tt.pr.color=FALSE)}.
 Some terminals that do support ansi escape characters may contain
-bugs. An example is the RStudio terminal (RStudio 1.1) running on Ubuntu 16.04 
+bugs. An example is the RStudio terminal (RStudio 1.1) running on Ubuntu 16.04
 (and possibly other OSs).
 }
+\section{User-defined side effects}{
+
+
+All calls to \code{\link[base]{Sys.setenv}} and \code{\link[base]{options}}
+defined in a test file are captured and undone once the test file has run.
+}
+
 \examples{
 # create a test file, in temp directory
 tests <- "

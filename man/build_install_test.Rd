@@ -11,15 +11,15 @@ build_install_test(pkgdir = "./", testdir = "tinytest",
 \arguments{
 \item{pkgdir}{\code{[character]} Package directory}
 
-\item{testdir}{\code{[character]} Name of directory under \code{pkgdir/inst} 
+\item{testdir}{\code{[character]} Name of directory under \code{pkgdir/inst}
 containing test files.}
 
 \item{at_home}{\code{[logical]} toggle local tests.}
 
 \item{verbose}{\code{[logical]} toggle verbosity during execution}
 
-\item{keep_tempdir}{\code{[logical]} keep directory where the pkg is 
-installed and where tests are run? If \code{TRUE}, the directory is not deleted 
+\item{keep_tempdir}{\code{[logical]} keep directory where the pkg is
+installed and where tests are run? If \code{TRUE}, the directory is not deleted
 and it's location is printed.}
 }
 \value{

@@ -7,7 +7,8 @@
 \usage{
 run_test_dir(dir = "inst/tinytest", pattern = "^test.*\\\\.[rR]",
   at_home = TRUE, verbose = getOption("tt.verbose", TRUE),
-  color = getOption("tt.pr.color", TRUE))
+  color = getOption("tt.pr.color", TRUE), remove_side_effects = TRUE,
+  lc_collate = getOption("tt.collate", NA))
 
 test_all(pkgdir = "./", testdir = "inst/tinytest", ...)
 }
@@ -24,7 +25,16 @@ files starting with \code{test}).}
 
 \item{color}{\code{[logical]} toggle colorize output}
 
-\item{pkgdir}{\code{[character]} scalar. Root directory of the package (i.e. 
+\item{remove_side_effects}{\code{[logical]} toggle remove user-defined side 
+effects. Environment variables (\code{Sys.setenv()}) and options (\code{options()})
+defined in a test file are reset before running the next test file (see details).}
+
+\item{lc_collate}{\code{[character]} Locale setting used to sort the
+test files into the order of execution. The default \code{NA} ensures
+current locale is used. Set this e.g. to \code{"C"} to ensure bytewise
+and more platform-independent sorting (see details).}
+
+\item{pkgdir}{\code{[character]} scalar. Root directory of the package (i.e.
 direcory where \code{DESCRIPTION} and \code{NAMESPACE} reside).}
 
 \item{testdir}{\code{[character]} scalar. Subdirectory where test files are
@@ -43,6 +53,21 @@ A \code{tinytests} object
 \code{test} in \code{./inst/tinytest/}.  It is assumed that all functions to be
 tested are loaded.
 }
+\section{Details}{
+
+
+In general, we cannot guarantee that files will be run in any particular
+order accross all platforms, as it depends on the available collation charts
+(a chart that determines how alphabets are sorted).  For this reason it is a
+good idea to create test files that run independent of each other so their
+order of execution does not matter. In tinytest, test files cannot share
+variables. The default behavior of test runners furher discourages
+interdependence by resetting environment variables and options that are set
+in a test file after the file is executed. If an environment variable needs
+to survive a single file, use \code{base::Sys.setenv()} explicitly.
+Similarly, if an option setting needs to survive, use \code{base::options}
+}
+
 \examples{
 # create a test file in tempdir
 tests <- "
