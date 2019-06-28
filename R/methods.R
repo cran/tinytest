@@ -1,7 +1,7 @@
 
 
 #' @rdname tinytests
-#' @param object a tinytests object
+#' @param object a \code{tinytests} object
 #' @return For \code{summary} a \code{\link{table}} object
 #' @export
 summary.tinytests <- function(object, ...){
@@ -26,7 +26,43 @@ summary.tinytests <- function(object, ...){
   
   cat(hdr,"\n\n")
   tab
-}   
+}
+
+#' @rdname tinytests
+#' @return For \code{all_pass}, \code{any_pass}, \code{all_fail}, \code{any_fail}: 
+#'  a single \code{logical}
+#' @export
+all_pass <- function(x){
+  stopifnot(inherits(x,'tinytests'))
+  all(sapply(x, isTRUE))
+}
+
+#' @rdname tinytests
+#' @export
+any_pass <- function(x){
+  stopifnot(inherits(x,'tinytests'))
+  any(sapply(x, isTRUE))
+}
+
+#' @rdname tinytests
+#' @export
+all_fail <- function(x){
+  stopifnot(inherits(x,'tinytests'))
+   all(sapply(x, isFALSE))
+}
+
+
+#' @rdname tinytests
+#' @export
+any_fail <- function(x){
+  stopifnot(inherits(x,'tinytests'))
+   any(sapply(x, isFALSE))
+}
+
+
+
+
+   
 
 #' Tinytests object
 #'
@@ -40,7 +76,7 @@ summary.tinytests <- function(object, ...){
 #' @param i an index
 #' @param x a \code{tinytests} object 
 #'
-#' @return For \code{[.tinytests} another, smaller \code{tinytests} object.
+#' @return For \code{`[.tinytests`} a \code{tinytests} object.
 #'
 #' @export
 #' @rdname tinytests
@@ -58,7 +94,7 @@ summary.tinytests <- function(object, ...){
 #' By default, the first 3 failing test results are printed in long form,
 #' the next 7 failing test results are printed in short form and all other 
 #' failing tests are not printed. These defaults can be changed by passing options
-#' to  \code{print.tinytest}, or by setting one or more of the following general
+#' to  \code{print.tinytest}, or by setting one or more of the following global
 #' options:
 #' \itemize{
 #' \item{\code{tt.pr.passes} Set to \code{TRUE} to print output of non-failing tests.}
@@ -67,6 +103,14 @@ summary.tinytests <- function(object, ...){
 #' }
 #'
 #' For example, set \code{options(tt.pr.limit=Inf)} to print all test results.
+#' Furthermore, there is the option
+#' \itemize{
+#' \item{\code{tt.pr.color},}
+#' }
+#' which determines whether colored output is printed.
+#' If R is running in a dumb terminal (detected by comparing 
+#' environment variable \code{"TERM"} to \code{"dumb"}), then
+#' this option is set to \code{FALSE} when the package is loaded.
 #' 
 #' @rdname tinytests 
 #' @export

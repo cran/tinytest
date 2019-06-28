@@ -7,11 +7,11 @@
 setup_tinytest(pkgdir, force = FALSE, verbose = TRUE)
 }
 \arguments{
-\item{pkgdir}{Package source directory}
+\item{pkgdir}{\code{[character]} Package source directory}
 
-\item{force}{Toggle overwrite existing files? (not folders)}
+\item{force}{\code{[logical]} Toggle overwrite existing files? (not folders)}
 
-\item{verbose}{Toggle print progress}
+\item{verbose}{\code{[logical]} Toggle print progress}
 }
 \value{
 \code{NULL}, invisibly.

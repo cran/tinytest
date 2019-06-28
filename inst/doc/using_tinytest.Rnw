@@ -1,34 +1,68 @@
 %\VignetteIndexEntry{Using tinytest}
 \documentclass[11pt]{article}
 \usepackage{enumitem}
+\usepackage{xcolor}  % for color definitions
+\usepackage{sectsty} % to modify heading colors
+\usepackage{fancyhdr}
 \setlist{nosep}
 
+% simpler, but issue with your margin notes
+\usepackage[left=1cm,right=3cm, bottom=2cm, top=1cm]{geometry}
+%\usepackage{vmargin}
+%\setpapersize{USletter} % or a4 for you
+% Left Top Right Bottom headheight?? headsep footheight footsep
+%\setmarginsrb{0.75in}{0.25in}{1.1in}{0.25in}{15pt}{0pt}{10pt}{20pt}
+
 \usepackage{hyperref}
+
+\definecolor{bluetext}{RGB}{0,101,165}
+\definecolor{graytext}{RGB}{80,80,80}
 
 \hypersetup{
   pdfborder={0 0 0}
  , colorlinks=true 
- , urlcolor=red
- , linkcolor=blue
+ , urlcolor=blue
+ , linkcolor=bluetext
+ , linktoc=all
  , citecolor=blue
 }
 
+\sectionfont{\color{bluetext}}
+\subsectionfont{\color{bluetext}}
+\subsubsectionfont{\color{bluetext}}
+
+% no serif=better reading from screen.
 \renewcommand{\familydefault}{\sfdefault}
 
+% header and footers
+\pagestyle{fancy}
+\fancyhf{}                          % empty header and footer
+\renewcommand{\headrulewidth}{0pt}  % remove line on top
+\rfoot{\color{bluetext} tinytest \Sexpr{packageVersion("tinytest")}}
+\lfoot{\color{black}\thepage}  % side-effect of \color{}: lowers the printed text a little(?)
 
-\title{Using tinytest}
-\author{Mark van der Loo}
+\usepackage{fancyvrb}
 
+
+% custom commands make life easier.
 \newcommand{\code}[1]{\texttt{#1}}
 \newcommand{\pkg}[1]{\textbf{#1}}
+\let\oldmarginpar\marginpar
+\renewcommand{\marginpar}[1]{\oldmarginpar{\color{bluetext}\raggedleft\scriptsize #1}}
 
-
+% skip line at start of new paragraph
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{1ex}
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\title{Using tinytest}
+\author{Mark van der Loo}
+\date{\today{} | Package version \Sexpr{packageVersion("tinytest")}}
 
 \begin{document}
+\DefineVerbatimEnvironment{Sinput}{Verbatim}{fontshape=n,formatcom=\color{graytext}}
+\DefineVerbatimEnvironment{Soutput}{Verbatim}{fontshape=sl,formatcom=\color{graytext}}
 \newlength{\fancyvrbtopsep}
 \newlength{\fancyvrbpartopsep}
 \makeatletter
@@ -39,10 +73,13 @@
 \setlength{\fancyvrbtopsep}{0pt}
 \setlength{\fancyvrbpartopsep}{0pt}
 \maketitle{}
+\thispagestyle{empty}
 
 \tableofcontents{}
 <<echo=FALSE>>=
-options(prompt="R>  ", continue = "    ")
+options(prompt="R>  ",
+        continue = "    ",
+        width=75)
 @
 
 
@@ -102,7 +139,9 @@ Currently, the following expectations are implemented.
 \code{expect\_true(current)}               & does `current' evaluate to \code{TRUE}\\
 \code{expect\_false(current)}              & does `current' evaluate to \code{FALSE}\\
 \code{expect\_error(current, pattern)}     & error message matching \code{pattern}\\
-\code{expect\_warning(current, pattern)}   & warning message matching \code{pattern}
+\code{expect\_warning(current, pattern)}   & warning message matching \code{pattern}\\
+\code{expect\_message(current, pattern)}   & message matching \code{pattern}\\
+\code{expect\_silent(current, pattern)}    & expect no warnings or errors (just run)\\
 \end{tabular}
 \end{center}
 Here, \code{target} is the intended outcome and \code{current} is the observed
@@ -149,7 +188,7 @@ print them in long format (default) or in short, one-line format like so.
 <<>>=
 print(expect_equal(1+1, 3), type="short")
 @
-\marginpar{\scriptsize{\code{print} method}}
+\marginpar{\code{print} method}
 Functions that run multiple tests return an object of class \code{tinytests}
 (notice the plural). Since there may be a lot of test results, \pkg{tinytest}
 tries to be smart about printing them. The user has ultimate control over
@@ -179,7 +218,7 @@ checks. An example test file in tinytest can look like this.
     expect_equal(addOne(hihi), 2)
 \end{verbatim}
 
-A particular file can be run using\marginpar{\scriptsize\code{run\_test\_file}}
+A particular file can be run using\marginpar{\code{run\_test\_file}}
 <<eval>>=
 run_test_file("test_addOne.R", verbose=FALSE)
 @
@@ -205,7 +244,8 @@ options(tt.pr.passes=TRUE)
 @
 to print all results during the active R session.
 
-To run all test files in a certain directory, we can use\marginpar{\code{run\_test\_dir}}
+To run all test files in a certain directory, we can
+use\marginpar{\code{run\_test\_dir}}
 <<eval=FALSE>>=
 run_test_dir("/path/to/your/test/directory")
 @
@@ -219,14 +259,14 @@ out <- run_test_dir(system.file("tinytest", package="tinytest")
        , verbose=FALSE)
 @
 The results can be turned into data using \code{as.data.frame}.
-\marginpar{\scriptsize{\code{as.data.frame}}}
+\marginpar{\code{as.data.frame}}
 <<>>=
 head(as.data.frame(out), 3)
 @
 The last two columns indicate the line numbers where the test was defined.
 
 A `summary` of the output gives a table with passes and fails per file.
-\marginpar{\scriptsize{\code{summary}}}
+\marginpar{\code{summary}}
 <<>>=
 summary(out)
 @
@@ -382,52 +422,75 @@ expect_equal(dat, women)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Skipping tests on \code{CRAN}}
-There are limits to the amount of time a test can take on CRAN. For longer
-running code it is desirable to automatically toggle these tests off on CRAN,
-but to run them during development. 
+It is not possible to detect whether a test is running on CRAN. This means we
+are forced to detect that we are running tests in our own environment. 
 
-You can not really skip tests at CRAN, because there is no certain way to
-detect whether a package is tested at one of the CRAN's machines.  However,
-tests that are run with \code{test\_all}, \code{run\_test\_dir}, or
-\code{run\_test\_file} can be toggled on and off as follows.
-<<>>=
-if ( at_home() ){
-  expect_equal(2, 1+1)
-}
-@
-If a test file is run using \code{test\_all} or \code{test\_dir} then by
-default the code following the if-conditions is executed. It will be skipped on
-CRAN since tests are initiated with \code{test\_package} in that case.
-It is possible to switch the tests off by \code{test\_all(..., at\_home=FALSE)}
-and similar for \code{test\_dir}.
-
-If you want \code{R CMD check} to behave differently at home than from CRAN
-then the \code{tinytest.R} file in \code{pkg/tests} should look something like
-this.
+In the following example we use the host name to detect if we are running on
+our own machine and explicitly pass this information to \code{test\_package}.
 <<echo=FALSE>>=
-pr <- options(prompt="   ")
+options(prompt="  ", continue="  ")
 @
 <<eval=FALSE>>=
-if (requireNamespace("tinytest", quietly=TRUE)){
-  # Do a local check on the environment
-  on_cran <- identical(Sys.getenv("ONCRAN"),"TRUE")
-  # now run tinytest
-  tinytest::test_package("PACKAGENAME", at_home = !on_cran)
+# contents of pkgdir/tests/tinytest.R
+if ( requireNamespace("tinytest", quietly=TRUE) ){
+   home <- identical( Sys.info()["nodename"], "YOURHOSTNAME" )
+   tinytest::test_package("PKGNAME", at_home = home)
 }
 @
-<<echo=FALSE>>=
-options(pr)
+Other ways to detect whether you are running `at home' include
+\begin{itemize}
+\item Set a custom environment variable (from your OS) and detect it with \code{Sys.getenv}.
+<<>>=
+home <- identical( Sys.getenv("HONEYIMHOME"), "TRUE" )
 @
-In this setting, all tests that that depend on \code{at\_home()} being
-\code{TRUE} will run, unless the environment variable \code{"ONCRAN"} is set to
-\code{"TRUE"}. 
+\item Use 4-number package versioning while developing and 3-number versioning
+for CRAN releases\footnote{As \href{https://stackoverflow.com/questions/36166288/skip-tests-on-cran-but-run-locally}{recommended here} by Dirk Eddelbuettel.}.
+<<eval=FALSE>>=
+home <- length(unclass(packageVersion("PKGNAME"))[[1]]) == 4
+@
+\end{itemize}
 
-It is up to the package author to decide how to test for this. Some authors use
-special versioning in their \code{DESCRIPTION} file to detect whether \code{R
-CMD check} is run on CRAN or not\footnote{See
-\href{https://stackoverflow.com/questions/36166288/skip-tests-on-cran-but-run-locally}{this
-stackoverflow question}.}. Any approach will require some kind of manual
-intervention.
+<<echo=FALSE>>=
+options(prompt="R> ", continue="   ")
+@
+
+
+\subsubsection*{When tests are run interactively}
+All the interactive test runners have \code{at\_home=TRUE} by default, so while
+you are developing all tests are run, unless you exclude them explicitly.
+<<>>=
+run_test_file("test_hehe.R", verbose=FALSE)
+run_test_file("test_hehe.R", verbose=FALSE, at_home=FALSE)
+@
+
+Here is an overview of test runners and their default setting for \code{at\_home}.
+
+\begin{center}
+\begin{tabular}{rll}
+Function               & Default \code{at\_home}  & Intended use \\
+\hline
+\code{run\_test\_file}      & \code{TRUE}   & Interactive by developer\\
+\code{run\_test\_dir}       & \code{TRUE}   & Interactive by developer\\
+\code{test\_all}            & \code{TRUE}   & Interactive by developer\\
+\code{build\_install\_test} & \code{TRUE}   & Interactive by developer\\
+\code{test\_package}        & \code{FALSE}  & \code{R CMD check}, or after installation by user.
+\end{tabular}
+\end{center}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -435,12 +498,10 @@ intervention.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Testing your package after installation}
 Supposing your package is called \pkg{hehe} and the \pkg{tinytest}
-infrastructure is used, the following commands run all of \pkg{hehe}'s
-tests.
+infrastructure is used. If the package is installed, the following command runs
+\pkg{hehe}'s tests. 
 <<eval=FALSE>>=
-library(hehe)
-library(tinytest)
-run_test_dir( system.file("tinytest",package="hehe") )
+tinytest::test_package("hehe")
 @
 This can come in handy when a user of \pkg{hehe} reports a bug and you want to
 make sure all tested functionality works on the user's system.
@@ -593,7 +654,7 @@ to this as a \emph{regression}.
 
 
   \bibitem{csardi2016cyclocomp}
-    \href{https://cran.r-project.org/package=cyclocomp}{cyclocomp: cyclomatic complexity of r code}
+    \href{https://cran.r-project.org/package=cyclocomp}{cyclocomp: cyclomatic complexity of R code}
     G\'abor Cs\'ardi (2016)
     R package version 1.1.0
 

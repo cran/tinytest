@@ -12,7 +12,7 @@
 \arguments{
 \item{x}{A \code{tinytest} object}
 
-\item{type}{Toggle format type}
+\item{type}{\code{[logical]} Toggle format type}
 
 \item{...}{passed to \code{\link{format.tinytest}}}
 }

@@ -6,8 +6,10 @@
 \alias{expect_equivalent}
 \alias{expect_true}
 \alias{expect_false}
+\alias{expect_silent}
 \alias{expect_error}
 \alias{expect_warning}
+\alias{expect_message}
 \title{Express expectations}
 \usage{
 expect_equal(current, target, tol = sqrt(.Machine$double.eps), ...)
@@ -20,9 +22,13 @@ expect_true(current)
 
 expect_false(current)
 
+expect_silent(current, quiet = TRUE)
+
 expect_error(current, pattern = ".*")
 
 expect_warning(current, pattern = ".*")
+
+expect_message(current, pattern = ".*")
 }
 \arguments{
 \item{current}{\code{[R object or expression]} Outcome or expression under scrutiny.}
@@ -33,6 +39,9 @@ expect_warning(current, pattern = ".*")
 to \code{\link[base]{all.equal} (tolerance)}}
 
 \item{...}{Passed to \code{all.equal}}
+
+\item{quiet}{\code{[logical]} suppress output printed by the \code{current} 
+expression (see examples)}
 
 \item{pattern}{\code{[character]} A regular expression to match the message.}
 }
@@ -47,6 +56,8 @@ Express expectations
 \details{
 \code{expect_equivalent} calls \code{expect_equal} with the extra
 arguments \code{check.attributes=FALSE} and \code{use.names=FALSE}
+
+\code{expect_silent} fails when an error or warning is thrown.
 }
 \note{
 Each \code{expect_haha} function can also be called as \code{checkHaha}.
@@ -59,6 +70,12 @@ expect_equal(1 + 1, 2)       # TRUE
 expect_equal(1 - 1, 2)       # FALSE
 expect_equivalent(2, c(x=2)) # TRUE
 expect_equal(2, c(x=2))      # FALSE
+
+
+expect_silent(1+1)           # TRUE
+expect_silent(1+"a")         # FALSE
+expect_silent(print("hihi")) # TRUE, nothing goes to screen
+expect_silent(print("hihi", quiet=FALSE)) # FALSE, and printed
 
 }
 \seealso{

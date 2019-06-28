@@ -2,6 +2,10 @@
 % Please edit documentation in R/methods.R
 \name{summary.tinytests}
 \alias{summary.tinytests}
+\alias{all_pass}
+\alias{any_pass}
+\alias{all_fail}
+\alias{any_fail}
 \alias{[.tinytests}
 \alias{tinytests}
 \alias{print.tinytests}
@@ -9,6 +13,14 @@
 \title{Tinytests object}
 \usage{
 \method{summary}{tinytests}(object, ...)
+
+all_pass(x)
+
+any_pass(x)
+
+all_fail(x)
+
+any_fail(x)
 
 \method{[}{tinytests}(x, i)
 
@@ -19,7 +31,7 @@
 \method{as.data.frame}{tinytests}(x, ...)
 }
 \arguments{
-\item{object}{a tinytests object}
+\item{object}{a \code{tinytests} object}
 
 \item{...}{passed to \code{\link{format.tinytest}}}
 
@@ -36,7 +48,10 @@
 \value{
 For \code{summary} a \code{\link{table}} object
 
-For \code{[.tinytests} another, smaller \code{tinytests} object.
+For \code{all_pass}, \code{any_pass}, \code{all_fail}, \code{any_fail}: 
+ a single \code{logical}
+
+For \code{`[.tinytests`} a \code{tinytests} object.
 
 For \code{as.data.frame.} a data frame.
 }
@@ -51,7 +66,7 @@ from running multiple tests from script. E.g. by running
 By default, the first 3 failing test results are printed in long form,
 the next 7 failing test results are printed in short form and all other 
 failing tests are not printed. These defaults can be changed by passing options
-to  \code{print.tinytest}, or by setting one or more of the following general
+to  \code{print.tinytest}, or by setting one or more of the following global
 options:
 \itemize{
 \item{\code{tt.pr.passes} Set to \code{TRUE} to print output of non-failing tests.}
@@ -60,6 +75,14 @@ options:
 }
 
 For example, set \code{options(tt.pr.limit=Inf)} to print all test results.
+Furthermore, there is the option
+\itemize{
+\item{\code{tt.pr.color},}
+}
+which determines whether colored output is printed.
+If R is running in a dumb terminal (detected by comparing 
+environment variable \code{"TERM"} to \code{"dumb"}), then
+this option is set to \code{FALSE} when the package is loaded.
 }
 
 \examples{

@@ -56,7 +56,7 @@ tested are loaded.
 \section{Details}{
 
 
-In general, we cannot guarantee that files will be run in any particular
+We cannot guarantee that files will be run in any particular
 order accross all platforms, as it depends on the available collation charts
 (a chart that determines how alphabets are sorted).  For this reason it is a
 good idea to create test files that run independent of each other so their

@@ -2,7 +2,7 @@
 % Please edit documentation in R/tinytest.R
 \name{test_package}
 \alias{test_package}
-\title{Test a package during R CMD check}
+\title{Test a package during R CMD check or after installation}
 \usage{
 test_package(pkgname, testdir = "tinytest", at_home = FALSE, ...)
 }
@@ -16,17 +16,23 @@ to the working directory of \code{R CMD check}.}
 
 \item{...}{extra arguments, passed to \code{\link{run_test_dir}}}
 }
+\value{
+If \code{interactive()}, a \code{tinytests} object. If not
+ \code{interactive()}, an error is thrown when at least one test fails.
+}
 \description{
-Run all tests in a package. Throw an error and print all failed test
-results when one or more tests fail. This function is intended to be
-used with \code{R CMD check} and not for interactive use (use \code{\link{test_all}}
-or \code{\link{build_install_test}} instead). Tests that are only run 
-\code{\link{at_home}} are skipped by default (as if it was run on CRAN).
+Run all tests in an installed package. Throw an error and print all failed test
+results when one or more tests fail if not in interactive mode (e.g. when
+R CMD check tests a package). This function is intended to be
+used by \code{R CMD check} or by a user that installed a package that
+uses the \pkg{tinytest} test infrastructure.
 }
 \section{Details}{
 
 We set \code{at_home=FALSE} by default so \code{R CMD check} will run the same
-as at CRAN.
+as at CRAN. See the package vignette (Section 4) for tips on how to set up
+the package structure.
+\code{vignette("using_tinytest",package="tinytest")}.
 }
 
 \examples{

@@ -65,6 +65,8 @@ print(out, nlong=0, passes=TRUE)
 
 }
 \seealso{
+\code{\link{ignore}}
+
 Other test-files: \code{\link{build_install_test}},
   \code{\link{run_test_dir}},
   \code{\link{summary.tinytests}},

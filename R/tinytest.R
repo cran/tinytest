@@ -75,7 +75,7 @@ lineformat <- function(x){
   else sprintf("%d",x)
 }
 
-#' @param type Toggle format type
+#' @param type \code{[logical]} Toggle format type
 #'
 #' @return A character string
 #'
@@ -159,7 +159,7 @@ print.tinytest <- function(x,...){
 #' @export
 expect_equal <- function(current, target, tol = sqrt(.Machine$double.eps), ...){
 
-  check <- all.equal(current, target,...)
+  check <- all.equal(current, target, tol=tol, ...)
   equal <- isTRUE(check)
   diff  <- if (equal) NA_character_ else paste0(" ", check,collapse="\n")
   short <- if(equal) NA_character_ else shortdiff(current, target, tolerance=tol)
@@ -198,7 +198,9 @@ shortdiff <- function(current, target, ...){
 #' @rdname expect_equal
 #' @export
 expect_equivalent <- function(current, target, tol = sqrt(.Machine$double.eps), ...){
-  out <- expect_equal(current, target, check.attributes=FALSE,use.names=FALSE,...)
+  out <- expect_equal(current, target
+          , check.attributes=FALSE,use.names=FALSE
+          , tol=tol, ...)
   attr(out, 'call') <- sys.call(sys.parent(1))
   out
 }
@@ -232,15 +234,86 @@ expect_false <- function(current){
 }
 
 
+
+
+#' @rdname expect_equal
+#'
+#' @param quiet \code{[logical]} suppress output printed by the \code{current} 
+#'        expression (see examples)
+#'
+#' @details
+#'
+#' \code{expect_silent} fails when an error or warning is thrown. 
+#'
+#' @examples
+#'
+#' expect_silent(1+1)           # TRUE
+#' expect_silent(1+"a")         # FALSE
+#' expect_silent(print("hihi")) # TRUE, nothing goes to screen
+#' expect_silent(print("hihi", quiet=FALSE)) # FALSE, and printed
+#'
+#' @export
+expect_silent <- function(current, quiet=TRUE){
+
+  ## Make sure that printed output does not go to screen.
+  # nullfile() was introduced at 3.6.0 and we want to be usable
+  # on older releases as well.
+  has_nullfile <- exists("nullfile")
+
+  if (quiet){
+    dumpfile <- if(has_nullfile) nullfile() else tempfile()
+    sink(dumpfile)
+  }
+
+  # clean up
+  on.exit({
+    if (quiet){
+      sink(NULL)
+      if (!has_nullfile) unlink(dumpfile)
+    }
+  })
+  
+ 
+  # try to evaluate 'current' if that doesn't work properly, store
+  # error or warning message.
+  result <- TRUE
+  msg <- ""
+  type <- "none"
+  tryCatch(current
+    , error = function(e){
+        result <<- FALSE 
+        msg <<- e$message
+        type <<- "An error"
+    } 
+    , warning = function(w){
+        result <<- FALSE
+        msg <<- w$message
+        type <<- "A warning"
+    }
+  )
+
+  call <- sys.call(sys.parent(1))
+  diff <- if (msg != ""){
+    sprintf("Execution was not silent. %s was thrown with message\n  '%s'",type,msg)
+  } else {
+    NA_character_
+  }
+  tinytest(result
+    , call  = sys.call(sys.parent(1))
+    , short = if (result) NA_character_ else "xcpt"
+    , diff  = diff
+  )
+}
+
+
 #' @rdname expect_equal
 #' @param pattern \code{[character]} A regular expression to match the message.
 #' @export
 expect_error <- function(current, pattern=".*"){
-  expr <- substitute(current)
   result <- FALSE
   diff <- "No Error"
-  e <- sys.frame(-2) 
-  tryCatch(eval(expr, envir=e), error=function(e){
+  
+  tryCatch(current, error=function(e){
             if (grepl(pattern, e$message)){
                 result <<- TRUE
             } else {
@@ -258,11 +331,9 @@ expect_error <- function(current, pattern=".*"){
 expect_warning <- function(current, pattern=".*"){
   
   result <- FALSE
-  expr <- substitute(current)
   diff <- "No Warning"
 
-  e <- sys.frame(-2) 
-  withCallingHandlers(eval(expr, envir=e)
+  withCallingHandlers(current
     , warning = function(w){
         if (grepl(pattern, w$message)){
           result <<- TRUE
@@ -270,13 +341,63 @@ expect_warning <- function(current, pattern=".*"){
           diff <<- sprintf("The warning message\n '%s'\n does not match pattern '%s'"
                           , w$message, pattern)
         }
-        eval(invokeRestart("muffleWarning"), envir=e)
-    })
+        invokeRestart("muffleWarning")
+      }
+  )
 
   tinytest(result, call=sys.call(sys.parent(1))
            , short = if (result) NA_character_ else "xcpt"
            , diff  = if (result) NA_character_ else diff)
 }
+
+
+#' @rdname expect_equal
+#' @export
+expect_message <- function(current, pattern=".*"){
+  value <- ""
+  tc <- textConnection("value", open="w", local=TRUE)
+  sink(file=tc,type="message", split=FALSE)
+  
+
+  result <- TRUE
+  msg    <- ""
+  tryCatch(current
+    , error = function(e){
+        result <<- FALSE
+        msg <<- sprintf("Expected message, got error:\n '%s'",e$message)
+      }
+    , warning = function(w){
+        result <<- FALSE
+        msg <<- sprintf("Expected message, got warning:\n '%s'", w$message)
+      }
+  )
+  sink(file = NULL, type="message")
+  close(tc)
+  
+  # collapse the value string in case multiple messages were caught.
+  value <- paste(value, collapse="\n")
+  call <- sys.call(sys.parent(1))
+  # we got a warning or error instead of a message:
+  if (!result){
+    tinytest(
+        result
+      , call
+      , diff  = msg
+      , short = "xcpt" 
+    ) 
+  # we got a message, check if it matches 'pattern'
+  } else if ( !grepl(pattern, value ) ) {
+    tinytest(FALSE
+      , call
+      , diff = sprintf("The message\n '%s'\n doen not match pattern '%s'",value,pattern)
+      , short = "xcpt"
+    )
+  } else {
+    tinytest(TRUE, call)
+  }
+  
+}
+
 
 
 
@@ -341,12 +462,24 @@ add_RUnit_style <- function(e){
 #'
 #' Ignored expectations are not reported in the test results.
 #' Ignoring is only useful for test files, and not for use directly
-#' at the commandline. See also the \href{../docs/using_tinytest.pdf}{vignette}.
+#' at the command-line. See also the package vignette: \code{vignette("using_tinytest")}.
 #'
-#' @param fun An \code{expect_} function
+#' @param fun \code{[function]} An \code{expect_} function
 #'
-#' @return an ignored function
+#' @return An ignored \code{function}
 #' @family test-functions
+#'
+#'
+#' @section Details:
+#'
+#' \code{ignore} is a higher-order function: a function that returns another function.
+#' In particular, it accepts a function and returns a function that is almost identical
+#' to the input function. The only difference is that the return value of the function
+#' returned by \code{ignore} is not caught by \code{\link{run_test_file}} and friends. 
+#' For example, \code{ignore(expect_true)} is a function, and we can use it as 
+#' \code{ignore(expect_true)( 1 == 1)}. The return value of \code{ignore(expect_true)(1==1)}
+#' is exactly the same as that for \code{expect_true(1==1)}. 
+#'
 #'
 #' @examples
 #' \donttest{
@@ -461,6 +594,7 @@ reset_options <- function(env){
 #' print(out, nlong=0, passes=TRUE)
 #'
 #' @family test-files
+#' @seealso \code{\link{ignore}}
 #' @export
 run_test_file <- function( file
                          , at_home=TRUE
@@ -511,14 +645,18 @@ run_test_file <- function( file
   o <- output()
   # we sleeve the expectation functions so their
   # output  will be captured in 'o'
-  e <- new.env()
+  e <- new.env(parent=globalenv())
   e$expect_equal      <- capture(expect_equal, o)
   e$expect_equivalent <- capture(expect_equivalent, o)
   e$expect_true       <- capture(expect_true, o)
   e$expect_false      <- capture(expect_false, o)
+  e$expect_message    <- capture(expect_message, o)
   e$expect_warning    <- capture(expect_warning, o)
   e$expect_error      <- capture(expect_error, o)
   e$expect_identical  <- capture(expect_identical, o)
+  e$expect_silent     <- capture(expect_silent, o)
+  e$ignore            <- ignore
+  e$at_home           <- tinytest::at_home
 
   ## add checkFoo equivalents of expect_foo
   if ( getOption("tt.RUnitStyle", TRUE) ) add_RUnit_style(e)
@@ -531,25 +669,32 @@ run_test_file <- function( file
   ## on exit
   e$options <- capture_options(options, oldop)
 
-  # parse file, store source references.
+  # parse file, store source reference.
   parsed <- parse(file=file, keep.source=TRUE)
   src <- attr(parsed, "srcref")
-
   o$file <- file
+
+  # format file name for printing while running.
+  prfile <- basename(file)
+  if (nchar(prfile) > 30 ){
+    prfile <- paste0("..",substr(prfile, nchar(prfile)-27,nchar(prfile)))
+  }  
+  prfile <- paste("Running",gsub(" ",".",sprintf("%-30s",basename(file))))
+
+  # evaluate expressions one by one
   for ( i in seq_along(parsed) ){
     expr   <- parsed[[i]]
     o$fst  <- src[[i]][1]
     o$lst  <- src[[i]][3]
     o$call <- expr
     out  <- eval(expr, envir=e)
-
-    fmtstr <- if ( color ){
-      "\rRunning %s (%02d|\033[0;32m%02d\033[0m|\033[0;31m%02d\033[0m)"
-    } else {
-      "\rRunning %s (T%02d|P%02d|F%02d)"
-    }
-    catf(fmtstr, basename(file), o$ntest(), o$npass(), o$nfail() )
-
+    
+    # print the test counter. 
+    catf("\r%s %4d tests ", prfile, o$ntest())
+    # print status after counter
+    if ( o$ntest() == 0 ) {} # print nothing if nothing was tested
+    else if ( o$nfail() == 0) catf(if(color) "\033[0;32mOK\033[0m" else "OK")
+    else catf(if (color) "\033[0;31m%d errors\033[0m" else "%d errors", o$nfail())
   }
   catf("\n")
   
@@ -582,7 +727,7 @@ run_test_file <- function( file
 #'  
 #' @section Details:
 #'
-#' In general, we cannot guarantee that files will be run in any particular
+#' We cannot guarantee that files will be run in any particular
 #' order accross all platforms, as it depends on the available collation charts
 #' (a chart that determines how alphabets are sorted).  For this reason it is a
 #' good idea to create test files that run independent of each other so their
@@ -708,13 +853,13 @@ at_home <- function(){
   identical(Sys.getenv("TT_AT_HOME"),"TRUE")
 }
 
-#' Test a package during R CMD check
+#' Test a package during R CMD check or after installation
 #'
-#' Run all tests in a package. Throw an error and print all failed test
-#' results when one or more tests fail. This function is intended to be
-#' used with \code{R CMD check} and not for interactive use (use \code{\link{test_all}}
-#' or \code{\link{build_install_test}} instead). Tests that are only run 
-#' \code{\link{at_home}} are skipped by default (as if it was run on CRAN).
+#' Run all tests in an installed package. Throw an error and print all failed test
+#' results when one or more tests fail if not in interactive mode (e.g. when
+#' R CMD check tests a package). This function is intended to be
+#' used by \code{R CMD check} or by a user that installed a package that
+#' uses the \pkg{tinytest} test infrastructure.
 #'
 #' @param pkgname \code{[character]} scalar. Name of the package
 #' @param testdir \code{[character]} scalar. Path to installed directory, relative
@@ -725,8 +870,12 @@ at_home <- function(){
 #'
 #' @section Details:
 #' We set \code{at_home=FALSE} by default so \code{R CMD check} will run the same
-#' as at CRAN.
-#' 
+#' as at CRAN. See the package vignette (Section 4) for tips on how to set up
+#' the package structure.
+#' \code{vignette("using_tinytest",package="tinytest")}.
+#'
+#' @return If \code{interactive()}, a \code{tinytests} object. If not
+#'  \code{interactive()}, an error is thrown when at least one test fails.
 #'
 #' @family test-files
 #' @seealso \code{\link{setup_tinytest}}
@@ -750,9 +899,9 @@ test_package <- function(pkgname, testdir = "tinytest", at_home=FALSE, ...){
   if ( any(i_fail) ){
     msg <- paste( sapply(out[i_fail], format.tinytest, type="long"), collapse="\n")
     msg <- paste(msg, "\n")
-    stop(msg, call.=FALSE)
+    if (!interactive()) stop(msg, call.=FALSE)
   } else {
-    invisible(TRUE)
+    invisible(out)
   }
 }
 

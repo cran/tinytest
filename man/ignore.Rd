@@ -7,16 +7,28 @@
 ignore(fun)
 }
 \arguments{
-\item{fun}{An \code{expect_} function}
+\item{fun}{\code{[function]} An \code{expect_} function}
 }
 \value{
-an ignored function
+An ignored \code{function}
 }
 \description{
 Ignored expectations are not reported in the test results.
 Ignoring is only useful for test files, and not for use directly
-at the commandline. See also the \href{../docs/using_tinytest.pdf}{vignette}.
+at the command-line. See also the package vignette: \code{vignette("using_tinytest")}.
 }
+\section{Details}{
+
+
+\code{ignore} is a higher-order function: a function that returns another function.
+In particular, it accepts a function and returns a function that is almost identical
+to the input function. The only difference is that the return value of the function
+returned by \code{ignore} is not caught by \code{\link{run_test_file}} and friends. 
+For example, \code{ignore(expect_true)} is a function, and we can use it as 
+\code{ignore(expect_true)( 1 == 1)}. The return value of \code{ignore(expect_true)(1==1)}
+is exactly the same as that for \code{expect_true(1==1)}.
+}
+
 \examples{
 \donttest{
    ## The result of 'expect_warning' is not stored in the test result when
