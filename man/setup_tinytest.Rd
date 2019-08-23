@@ -22,10 +22,6 @@ directory. Creates \code{tests/tinytest.R} so the package is
 tested with \code{R CMD check}. Adds \code{tinytests} as a suggested
 package to the \code{DESCRIPTION}.
 }
-\note{
-This function is still a little experimental, please
-report bugs at \href{https://github.com/markvanderloo/tinytest/issues}{https://github.com/markvanderloo/tinytest/issues}.
-}
 \section{Note on \code{DESCRIPTION}}{
 
 

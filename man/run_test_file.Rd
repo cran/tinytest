@@ -5,19 +5,26 @@
 \title{Run an R file containing tests; gather results}
 \usage{
 run_test_file(file, at_home = TRUE, verbose = getOption("tt.verbose",
-  TRUE), color = getOption("tt.pr.color", TRUE),
-  remove_side_effects = TRUE)
+  2), color = getOption("tt.pr.color", TRUE),
+  remove_side_effects = TRUE, side_effects = FALSE, ...)
 }
 \arguments{
 \item{file}{\code{[character]} File location of a .R file.}
 
 \item{at_home}{\code{[logical]} toggle local tests.}
 
-\item{verbose}{\code{[logical]} toggle verbosity during execution}
+\item{verbose}{\code{[integer]} verbosity level. 0: be quiet, 1: print
+status per file, 2: print status per test expression.}
 
 \item{color}{\code{[logical]} toggle colorize counts in verbose mode (see Note)}
 
-\item{remove_side_effects}{\code{[logical]} toggle remove user-defined side effects? See section on side effects.}
+\item{remove_side_effects}{\code{[logical]} toggle remove user-defined side
+effects? See section on side effects.}
+
+\item{side_effects}{\code{[logical|list]} Either a logical,
+or a list of arguments to pass to \code{\link{report_side_effects}}.}
+
+\item{...}{Currently unused}
 }
 \value{
 A \code{list} of class \code{tinytests}, which is a list
@@ -43,7 +50,17 @@ bugs. An example is the RStudio terminal (RStudio 1.1) running on Ubuntu 16.04
 
 
 All calls to \code{\link[base]{Sys.setenv}} and \code{\link[base]{options}}
-defined in a test file are captured and undone once the test file has run.
+defined in a test file are captured and undone once the test file has run,
+if \code{remove_side_effects} is set to \code{TRUE}.
+}
+
+\section{Tracking side effects}{
+
+
+Certain side effects can be tracked, even when they are not explicitly evoked
+in the test file. See \code{\link{report_side_effects}} for details. 
+Calls to \code{report_side_effects} within the test file overrule
+settings provided with this function.
 }
 
 \examples{
@@ -51,8 +68,12 @@ defined in a test file are captured and undone once the test file has run.
 tests <- "
 addOne <- function(x) x + 2
 
+Sys.setenv(lolz=2)
+
 expect_true(addOne(0) > 0)
 expect_equal(2, addOne(1))
+
+Sys.unsetenv('lolz')
 "
 testfile <- tempfile(pattern="test_", fileext=".R")
 write(tests, testfile)
@@ -63,12 +84,19 @@ out
 # print everything in short format, include passes in print.
 print(out, nlong=0, passes=TRUE)
 
+# run test file, track supported side-effects
+run_test_file(testfile, side_effects=TRUE)
+
+# run test file, track only changes in working directory 
+run_test_file(testfile, side_effects=list(pwd=TRUE, envvar=FALSE))
+
+
 }
 \seealso{
 \code{\link{ignore}}
 
 Other test-files: \code{\link{build_install_test}},
-  \code{\link{run_test_dir}},
+  \code{\link{exit_file}}, \code{\link{run_test_dir}},
   \code{\link{summary.tinytests}},
   \code{\link{test_package}}
 }

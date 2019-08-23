@@ -6,9 +6,9 @@
 \title{Run all tests in a directory}
 \usage{
 run_test_dir(dir = "inst/tinytest", pattern = "^test.*\\\\.[rR]",
-  at_home = TRUE, verbose = getOption("tt.verbose", TRUE),
+  at_home = TRUE, verbose = getOption("tt.verbose", 2),
   color = getOption("tt.pr.color", TRUE), remove_side_effects = TRUE,
-  lc_collate = getOption("tt.collate", NA))
+  cluster = NULL, lc_collate = getOption("tt.collate", NA), ...)
 
 test_all(pkgdir = "./", testdir = "inst/tinytest", ...)
 }
@@ -29,18 +29,20 @@ files starting with \code{test}).}
 effects. Environment variables (\code{Sys.setenv()}) and options (\code{options()})
 defined in a test file are reset before running the next test file (see details).}
 
+\item{cluster}{A \code{\link[parallel]{makeCluster}} object.}
+
 \item{lc_collate}{\code{[character]} Locale setting used to sort the
 test files into the order of execution. The default \code{NA} ensures
 current locale is used. Set this e.g. to \code{"C"} to ensure bytewise
 and more platform-independent sorting (see details).}
+
+\item{...}{Arguments passed to \code{run_test_file}}
 
 \item{pkgdir}{\code{[character]} scalar. Root directory of the package (i.e.
 direcory where \code{DESCRIPTION} and \code{NAMESPACE} reside).}
 
 \item{testdir}{\code{[character]} scalar. Subdirectory where test files are
 stored.}
-
-\item{...}{passed to \code{run_test_dir}.}
 }
 \value{
 A \code{tinytests} object
@@ -48,24 +50,35 @@ A \code{tinytests} object
 \description{
 \code{run\_test\_dir} runs all test files in a directory.
 
-\code{test_all} is a convenience function for package development, that wraps
-\code{run_test_dir}. By default, it runs all files starting with
-\code{test} in \code{./inst/tinytest/}.  It is assumed that all functions to be
-tested are loaded.
+\code{test_all} is a convenience function for package development, that
+wraps \code{run_test_dir}. By default, it runs all files starting with
+\code{test} in \code{./inst/tinytest/}.  It is assumed that all functions to
+be tested are loaded.
 }
 \section{Details}{
 
 
-We cannot guarantee that files will be run in any particular
-order accross all platforms, as it depends on the available collation charts
-(a chart that determines how alphabets are sorted).  For this reason it is a
-good idea to create test files that run independent of each other so their
-order of execution does not matter. In tinytest, test files cannot share
-variables. The default behavior of test runners furher discourages
-interdependence by resetting environment variables and options that are set
-in a test file after the file is executed. If an environment variable needs
-to survive a single file, use \code{base::Sys.setenv()} explicitly.
-Similarly, if an option setting needs to survive, use \code{base::options}
+We cannot guarantee that files will be run in any particular order accross
+all platforms, as it depends on the available collation charts (a chart that
+determines how alphabets are sorted).  For this reason it is a good idea to
+create test files that run independent of each other so their order of
+execution does not matter. In tinytest, test files cannot share variables.
+The default behavior of test runners furher discourages interdependence by
+resetting environment variables and options that are set in a test file
+after the file is executed. If an environment variable needs to survive a
+single file, use \code{base::Sys.setenv()} explicitly.  Similarly, if an
+option setting needs to survive, use \code{base::options}
+}
+
+\section{Parallel tests}{
+
+
+If \code{inherits(cluster, "cluster")} the tests are paralellized over a
+cluster of worker nodes. \pkg{tinytest} will be loaded onto each cluster
+node. All other preparation, including loading code from the tested package,
+must be done by the user. It is also up to the user to clean up the cluster
+after running tests. See the 'using tinytest' vignette for examples:
+\code{vignette("using_tinytest")}.
 }
 
 \examples{
@@ -88,8 +101,11 @@ dat <- as.data.frame(out)
 
 }
 \seealso{
+\code{\link[parallel]{makeCluster}},
+\code{\link[parallel]{clusterEvalQ}}, \code{\link[parallel]{clusterExport}}
+
 Other test-files: \code{\link{build_install_test}},
-  \code{\link{run_test_file}},
+  \code{\link{exit_file}}, \code{\link{run_test_file}},
   \code{\link{summary.tinytests}},
   \code{\link{test_package}}
 }

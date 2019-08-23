@@ -5,7 +5,7 @@
 \title{build, install and test}
 \usage{
 build_install_test(pkgdir = "./", testdir = "tinytest",
-  at_home = TRUE, verbose = getOption("tt.verbose", TRUE),
+  at_home = TRUE, verbose = getOption("tt.verbose", 2), ncpu = 1,
   keep_tempdir = FALSE)
 }
 \arguments{
@@ -18,17 +18,20 @@ containing test files.}
 
 \item{verbose}{\code{[logical]} toggle verbosity during execution}
 
+\item{ncpu}{\code{[numeric]} number of CPUs to use during the testing phase.}
+
 \item{keep_tempdir}{\code{[logical]} keep directory where the pkg is
-installed and where tests are run? If \code{TRUE}, the directory is not deleted
-and it's location is printed.}
+installed and where tests are run? If \code{TRUE}, the directory is not
+deleted and it's location is printed.}
 }
 \value{
 A \code{tinytests} object.
 }
 \description{
-Builds and installs the package in \code{pkgdir} under a temporary directory.
-Next, loads the package in a fresh R session and runs all the tests. For this
-function to work the following system requirements are necessary.
+Builds and installs the package in \code{pkgdir} under a temporary
+directory.  Next, loads the package in a fresh R session and runs all the
+tests. For this function to work the following system requirements are
+necessary.
 \itemize{
   \item{\code{R CMD build} is available on your system}
   \item{\code{Rscript} is available on your system}
@@ -41,8 +44,8 @@ function to work the following system requirements are necessary.
 }
 }
 \seealso{
-Other test-files: \code{\link{run_test_dir}},
-  \code{\link{run_test_file}},
+Other test-files: \code{\link{exit_file}},
+  \code{\link{run_test_dir}}, \code{\link{run_test_file}},
   \code{\link{summary.tinytests}},
   \code{\link{test_package}}
 }

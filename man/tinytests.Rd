@@ -25,6 +25,7 @@ any_fail(x)
 \method{[}{tinytests}(x, i)
 
 \method{print}{tinytests}(x, passes = getOption("tt.pr.passes", FALSE),
+  sidefx = getOption("tt.pr.sidefx", TRUE),
   limit = getOption("tt.pr.limit", 7), nlong = getOption("tt.pr.nlong",
   3), ...)
 
@@ -40,6 +41,8 @@ any_fail(x)
 \item{i}{an index}
 
 \item{passes}{\code{[logical]} Toggle: print passing tests?}
+
+\item{sidefx}{\code{[logical]} Toggle: print side effects?}
 
 \item{limit}{\code{[numeric]} Max number of results to print}
 
@@ -110,7 +113,7 @@ out[1]
 }
 \seealso{
 Other test-files: \code{\link{build_install_test}},
-  \code{\link{run_test_dir}}, \code{\link{run_test_file}},
-  \code{\link{test_package}}
+  \code{\link{exit_file}}, \code{\link{run_test_dir}},
+  \code{\link{run_test_file}}, \code{\link{test_package}}
 }
 \concept{test-files}

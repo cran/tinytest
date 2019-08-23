@@ -1,3 +1,22 @@
+version 1.0.0
+- New argument 'side_effects' for test runners: monitor side effects while running tests.
+- New function 'report_side_effects': toggle monitoring side-effects within test files.
+- Run test files in parallel, for example: test_package("pkg", ncpu=2). (Thanks
+  to Dirk Eddelbuettel for the suggestion).
+- New function 'exit_file':  stop running a test file with an optional message.
+- Other packages can now extend the package, see '?register_tinytest_extension'
+  for the API (Thanks to Michel Lang for the suggestion)
+- New function 'using' loads tinytest extension package.
+- New function 'expect_null'
+- Improved reporting for 'expect_true', 'expect_false'
+- Improved reporting for expect_identical, expect_true, expect_equivalent
+  in the case of scalar values.
+- Added second vignette with real-life examples of tinytest tests.
+- build_install_test gains argument 'color' and 'verbose'
+- test_package returns result visibly in interactive sessions.
+- Fixed path issue for build_install_test on Windows (thanks to Jan Wijffels)
+
+
 version 0.9.6
 - Fixed error caught on CRAN
 

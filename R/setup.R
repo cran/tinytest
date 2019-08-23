@@ -15,10 +15,6 @@
 #' Fails when it does not exist. It is assumed that the
 #' package is named in the \code{DESCRIPTION}.
 #'
-#' @note
-#' This function is still a little experimental, please
-#' report bugs at \href{https://github.com/markvanderloo/tinytest/issues}{https://github.com/markvanderloo/tinytest/issues}.
-#'
 #'
 #' @examples
 #' \dontrun{
@@ -32,10 +28,8 @@
 #'
 #' @export
 setup_tinytest <- function(pkgdir, force=FALSE, verbose=TRUE){
-
-  catf  <- function(fmt,...) if (verbose) cat(sprintf(fmt,...))
-  stopf <- function(fmt,...) cat(stop(fmt,...),call.=FALSE)
-
+  # local, verbosity-aware catf
+  catf <- function(fmt, ...) if (verbose) cat(sprintf(fmt,...))
   if (!dir.exists(pkgdir)){
     stopf("%s does not exist or is not a directory", pkgdir)
   }
@@ -121,4 +115,29 @@ expect_equal(1 + 1, 2)
   invisible(NULL)
 }
 
+
+#' The puppy for a pkgKitten
+#'
+#' Does exactly the same as \code{\link{setup_tinytest}}, but prints 
+#' a loving message aferwards (and who doesn't want that!?). Just
+#' think about those puppies.
+#'
+#' @inheritParams setup_tinytest
+#'
+#'
+#' @keywords internal
+#' @export
+puppy <- function(pkgdir, force=FALSE, verbose=TRUE){
+  setup_tinytest(pkgdir=pkgdir, force=force, verbose=verbose)
+  catf("\nThank you %s, for showing us some PUPPY LOVE <3\n",Sys.info()["user"])
+  catf(doggy)
+}
+
+doggy <- "
+    ,-.___,-.
+    \\_/_ _\\_/
+      )O_O(
+     { (_) }  W00F!
+      `-^-'   
+"
 

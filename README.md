@@ -40,8 +40,8 @@ where `hihi` is the name of the new package.
 
 All functions return an object of class `tinytests`. Results can be printed to
 screen, summarized with `summary` or converted to data frame  with
-`as.data.frame` for analyses. The option `verbose` (default: `TRUE`) toggles
-between showing test progress in the terminal.
+`as.data.frame` for analyses. The option `verbose` (default: `2`) controls
+showing test progress in the terminal.
 
 #### Test functions
 
@@ -57,6 +57,7 @@ the second argument represents the _desired_ value.
 | `expect_equal`              | Data and attributes of arguments must be equal|
 | `expect_equivalent`         | Data of arguments must be equal               |
 | `expect_identical`          | Target and current must be `identical`        |
+| `expect_null`               | Expression must evaluate to `NULL`            |
 | `expect_message`            | Expression must yield a message               |
 | `expect_warning`            | Expression must yield a warning               |
 | `expect_error`              | Expression must yield an error                |
@@ -66,6 +67,22 @@ the second argument represents the _desired_ value.
 For tests in a script there is an alternative syntax in the style of 
 [RUnit](https://CRAN.R-project.org/package=RUnit). For each function of the
 form `expect_lol` there is a function of the form `checkLol`.
+
+#### Monitor side-effects
+
+Side-effects, such as changing environment variables or changing the working
+directory can cause hard-to-trace bugs. Add the statement
+```
+report_side_effects()
+```
+to a test file and certain types of side-effects, if any, are reported.
+
+Alternatively, use the `side_effects` argument to any of the test runners,
+for example
+```
+test_all("/path/to/package", side_effects=TRUE)
+```
+
 
 
 #### Print options
@@ -104,7 +121,36 @@ For a package called `haha` that is tested with `tinytest`, any user that has
 tinytest::test_package("haha")
 ```
 
+#### Run tests in parallel
+
+Run tests in parallel over files.
+```
+tinytest::test_package("haha", ncpu=3)
+```
+Or, for more control:
+```
+cl <- parallel::makeCluster(4)
+parallel::clusterCall(cl, source, "R/functions.R")
+test_all(cluster=cl)
+stopCluster(cl)
+```
+
+#### Use extension packages
+
+Add the following to a test file to use assertions exported by
+`checkmate.tinytest`.
+```
+using(checkmate.tinytest)
+```
+
+
+
 #### Skipping or ignoring tests 
+
+Use `exit_file()` to stop executing a test file, with an optional message.
+```
+exit_file("I'm too tired to test today")
+```
 
 Use `ignore(testfunction)` to run a test but not include the result in the output.
 

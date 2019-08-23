@@ -4,7 +4,8 @@
 \alias{test_package}
 \title{Test a package during R CMD check or after installation}
 \usage{
-test_package(pkgname, testdir = "tinytest", at_home = FALSE, ...)
+test_package(pkgname, testdir = "tinytest", at_home = FALSE,
+  ncpu = NULL, ...)
 }
 \arguments{
 \item{pkgname}{\code{[character]} scalar. Name of the package}
@@ -14,7 +15,9 @@ to the working directory of \code{R CMD check}.}
 
 \item{at_home}{\code{[logical]} scalar. Are we at home? (see Details)}
 
-\item{...}{extra arguments, passed to \code{\link{run_test_dir}}}
+\item{ncpu}{A positive integer, or a \code{\link[parallel]{makeCluster}} object.}
+
+\item{...}{extra arguments passed to \code{\link{run_test_dir}} (e.g. \code{ncpu}).}
 }
 \value{
 If \code{interactive()}, a \code{tinytests} object. If not
@@ -40,14 +43,15 @@ the package structure.
 # Create a file with the following content, to use
 # tinytest as your unit testing framework:
   if (requireNamespace("tinytest", quietly=TRUE))
-    test_package("your package name")
+    tinytest::test_package("your package name")
 }
 }
 \seealso{
 \code{\link{setup_tinytest}}
 
 Other test-files: \code{\link{build_install_test}},
-  \code{\link{run_test_dir}}, \code{\link{run_test_file}},
+  \code{\link{exit_file}}, \code{\link{run_test_dir}},
+  \code{\link{run_test_file}},
   \code{\link{summary.tinytests}}
 }
 \concept{test-files}

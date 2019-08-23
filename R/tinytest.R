@@ -1,418 +1,26 @@
-#' @importFrom utils install.packages file_test capture.output
+#' @importFrom utils install.packages file_test capture.output getFromNamespace
+#' @importFrom parallel makeCluster parLapply stopCluster
 {}
-
-# define this internally, since the desired behavior was introduced at R 3.5.0
-isTRUE <- function(x){
-  is.logical(x) && length(x) == 1L && !is.na(x) && x
-}
-
-# define this internally, since it was introduced at R 3.5.0
-isFALSE <- function(x){
-  is.logical(x) && length(x) == 1L && !is.na(x) && !x
-}
-
-#' Tinytest constructor
-#'
-#'
-#' Each individual test in the package generates a \code{tinytest} object.
-#' A \code{tinytest} object behaves like a \code{logical} scalar, but
-#' it is endowed with attributes allowing to trace back where the test
-#' was run.
-#'
-#' @param result \code{[logical]} scalar.
-#' @param call   \code{[call]} The call that created \code{result}.
-#' @param diff   \code{[character]} difference between current and target value
-#'     (if any).
-#' @param short  \code{[character]} short description of the difference
-#' @param file   \code{[character]} File location of the test.
-#' @param fst    \code{[integer]} First line number in the test file.
-#' @param lst    \code{[integer]} Last line number in the test file (differs
-#'    from \code{fst} if the call spans multiple lines).
-#'
-#' @return A \code{tinytest} object.
-#'
-#'
-#' @examples
-#' tt <- expect_equal(1+1, 2)
-#' if (isTRUE(tt)){
-#'   print("w00p w00p!")
-#' } else {
-#'   print("Oh no!")
-#' }
-#'
-#'
-#'
-#' @keywords internal
-#' @export
-tinytest <- function(result, call
-    , diff = NA_character_
-    , short= NA_character_
-    , file = NA_character_
-    , fst  = NA_integer_
-    , lst  = NA_integer_
-    ,...){
-
-  structure(result         # logical TRUE/FALSE
-    , class    = "tinytest"
-    , call     = call  # call creating the object
-    , diff     = diff  # diff if isFALSE(result)
-    , short    = short # short diff (4 char)
-    , file     = file  # test file location
-    , fst      = fst   # first line of test call
-    , lst      = lst   # last line of test call
-    , ...)
-}
-
-
-na_str <- function(x) if ( is.na(x) ) "" else as.character(x)
-
-oneline <- function(x) sub("\\n.+","...",x)
-indent <- function(x, with="     ")
-  gsub("\\n *",paste0("\n",with),paste0(with,sub("^ +","",x)))
-
-lineformat <- function(x){
-  if ( is.na(x) ) ""
-  else sprintf("%d",x)
-}
-
-#' @param type \code{[logical]} Toggle format type
-#'
-#' @return A character string
-#'
-#'
-#' @rdname print.tinytest
-#' @export
-#'
-#' @examples
-#' tt <- expect_equal(1+1, 3)
-#' format(tt,"long")
-#' format(tt,"short")
-format.tinytest <- function(x,type=c("long","short"), ...){
-  type <- match.arg(type)
-
-  d <- attributes(x)
-  call  <- paste0(deparse(d$call), collapse="\n")
-  fst   <- lineformat(d$fst, ...)
-  lst   <- lineformat(d$lst, ...)
-  file  <- na_str(d$file)
-  short <- na_str(d$short)
-  diff  <- d$diff
-
-  result <- if (isTRUE(x)) "PASSED      " else sprintf("FAILED[%s]",short)
-  longfmt <- "----- %s: %s<%s--%s>\n%s"
-  if (isFALSE(x)) longfmt <- paste0(longfmt, "\n%s")
-
-  if (type == "short"){
-    sprintf("%s: %s<%s--%s> %s", result, basename(file), fst, lst, oneline(call))
-  }  else {
-    sprintf(longfmt, result, file, fst, lst
-                , indent(call, with=" call| ")
-                , indent(diff, with=" diff| "))
-  }
-
-}
-
-
-
-
-#' Print a tinytest object
-#'
-#' @param x A \code{tinytest} object
-#' @param ... passed to \code{\link{format.tinytest}}
-#'
-#' @examples
-#' print(expect_equal(1+1, 2))
-#' print(expect_equal(1+1, 3), type="long")
-#'
-#' @export
-print.tinytest <- function(x,...){
-  cat(format.tinytest(x,...),"\n")
-}
-
-
-#' Express expectations
-#'
-#' @param current \code{[R object or expression]} Outcome or expression under scrutiny.
-#' @param target \code{[R object or expression]} Expected outcome
-#' @param tol \code{[numeric]} Test equality to machine rounding. Passed
-#'     to \code{\link[base]{all.equal} (tolerance)}
-#' @param ... Passed to \code{all.equal}
-#'
-#' @return A \code{\link{tinytest}} object. A tinytest object is a
-#' \code{logical} with attributes holding information about the
-#' test that was run
-#'
-#' @note
-#' Each \code{expect_haha} function can also be called as \code{checkHaha}.
-#' Although the interface is not entirely the same, it is expected that
-#' this makes migration from the \code{RUnit} framework a little easier, for those
-#' who wish to do so.
-#'
-#' @family test-functions
-#'
-#' @examples
-#' expect_equal(1 + 1, 2)       # TRUE
-#' expect_equal(1 - 1, 2)       # FALSE
-#' expect_equivalent(2, c(x=2)) # TRUE
-#' expect_equal(2, c(x=2))      # FALSE
-#'
-#' @export
-expect_equal <- function(current, target, tol = sqrt(.Machine$double.eps), ...){
-
-  check <- all.equal(current, target, tol=tol, ...)
-  equal <- isTRUE(check)
-  diff  <- if (equal) NA_character_ else paste0(" ", check,collapse="\n")
-  short <- if(equal) NA_character_ else shortdiff(current, target, tolerance=tol)
-
-  tinytest(result = equal, call = sys.call(sys.parent(1)), diff=diff, short=short)
-}
-
-
-#' @rdname expect_equal
-#' @export
-expect_identical <- function(current, target){
-  result <- identical(current, target)
-  diff <-  if (result) NA_character_
-           else paste(" ", all.equal(current, target), collapse="\n")
-  short <- if (result) NA_character_
-           else shortdiff(current, target, tolerance=0)
-  tinytest(result=result, call=sys.call(sys.parent(1)), diff=diff, short=short)
-}
-
-
-# are there differences in data and/or attributes, or just in the attributes?
-shortdiff <- function(current, target, ...){
-  equivalent_data <- all.equal(current, target
-                       , check_attributes=FALSE
-                       , use.names=FALSE,...)
-  if (isTRUE(equivalent_data)) "attr"
-  else "data"
-}
-
-
-#' @details
-#' \code{expect_equivalent} calls \code{expect_equal} with the extra
-#' arguments \code{check.attributes=FALSE} and \code{use.names=FALSE}
-#'
-#'
-#' @rdname expect_equal
-#' @export
-expect_equivalent <- function(current, target, tol = sqrt(.Machine$double.eps), ...){
-  out <- expect_equal(current, target
-          , check.attributes=FALSE,use.names=FALSE
-          , tol=tol, ...)
-  attr(out, 'call') <- sys.call(sys.parent(1))
-  out
-}
-
-#' @rdname expect_equal
-#' @export
-expect_true <- function(current){
-  result <- isTRUE(current)
-  call <- sys.call(sys.parent(1))
-  if (!result){
-    diff  <- "Expected TRUE, got FALSE"
-    short <- shortdiff(TRUE, FALSE)
-    tinytest(result, call=call,diff=diff, short=short)
-  } else {
-    tinytest(result, call = sys.call(sys.parent(1)))
-  }
-}
-
-#' @rdname expect_equal
-#' @export
-expect_false <- function(current){
-  result <- isFALSE(current)
-  call   <- sys.call(sys.parent(1))
-  if (!result){
-    diff  <- "Expected FALSE, got TRUE"
-    short <- shortdiff(TRUE, FALSE)
-    tinytest(result, call=call,diff=diff, short=short)
-  } else {
-    tinytest(result, call = sys.call(sys.parent(1)))
-  }
-}
-
-
-
-
-#' @rdname expect_equal
-#'
-#' @param quiet \code{[logical]} suppress output printed by the \code{current} 
-#'        expression (see examples)
-#'
-#' @details
-#'
-#' \code{expect_silent} fails when an error or warning is thrown. 
-#'
-#' @examples
-#'
-#' expect_silent(1+1)           # TRUE
-#' expect_silent(1+"a")         # FALSE
-#' expect_silent(print("hihi")) # TRUE, nothing goes to screen
-#' expect_silent(print("hihi", quiet=FALSE)) # FALSE, and printed
-#'
-#' @export
-expect_silent <- function(current, quiet=TRUE){
-
-  ## Make sure that printed output does not go to screen.
-  # nullfile() was introduced at 3.6.0 and we want to be usable
-  # on older releases as well.
-  has_nullfile <- exists("nullfile")
-
-  if (quiet){
-    dumpfile <- if(has_nullfile) nullfile() else tempfile()
-    sink(dumpfile)
-  }
-
-  # clean up
-  on.exit({
-    if (quiet){
-      sink(NULL)
-      if (!has_nullfile) unlink(dumpfile)
-    }
-  })
-  
- 
-  # try to evaluate 'current' if that doesn't work properly, store
-  # error or warning message.
-  result <- TRUE
-  msg <- ""
-  type <- "none"
-  tryCatch(current
-    , error = function(e){
-        result <<- FALSE 
-        msg <<- e$message
-        type <<- "An error"
-    } 
-    , warning = function(w){
-        result <<- FALSE
-        msg <<- w$message
-        type <<- "A warning"
-    }
-  )
-
-  call <- sys.call(sys.parent(1))
-  diff <- if (msg != ""){
-    sprintf("Execution was not silent. %s was thrown with message\n  '%s'",type,msg)
-  } else {
-    NA_character_
-  }
-  tinytest(result
-    , call  = sys.call(sys.parent(1))
-    , short = if (result) NA_character_ else "xcpt"
-    , diff  = diff
-  )
-}
-
-
-#' @rdname expect_equal
-#' @param pattern \code{[character]} A regular expression to match the message.
-#' @export
-expect_error <- function(current, pattern=".*"){
-  result <- FALSE
-  diff <- "No Error"
-  
-  tryCatch(current, error=function(e){
-            if (grepl(pattern, e$message)){
-                result <<- TRUE
-            } else {
-              diff <<- sprintf("The error message:\n '%s'\n does not match pattern '%s'"
-                             , e$message, pattern)
-            }
-  })
-  tinytest(result, call = sys.call(sys.parent(1))
-           , short= if(result) NA_character_ else "xcpt"
-           , diff = if(result) NA_character_ else diff)
-}
-
-#' @rdname expect_equal
-#' @export
-expect_warning <- function(current, pattern=".*"){
-  
-  result <- FALSE
-  diff <- "No Warning"
-
-  withCallingHandlers(current
-    , warning = function(w){
-        if (grepl(pattern, w$message)){
-          result <<- TRUE
-        } else {
-          diff <<- sprintf("The warning message\n '%s'\n does not match pattern '%s'"
-                          , w$message, pattern)
-        }
-        invokeRestart("muffleWarning")
-      }
-  )
-
-  tinytest(result, call=sys.call(sys.parent(1))
-           , short = if (result) NA_character_ else "xcpt"
-           , diff  = if (result) NA_character_ else diff)
-}
-
-
-#' @rdname expect_equal
-#' @export
-expect_message <- function(current, pattern=".*"){
-  value <- ""
-  tc <- textConnection("value", open="w", local=TRUE)
-  sink(file=tc,type="message", split=FALSE)
-  
-
-  result <- TRUE
-  msg    <- ""
-  tryCatch(current
-    , error = function(e){
-        result <<- FALSE
-        msg <<- sprintf("Expected message, got error:\n '%s'",e$message)
-      }
-    , warning = function(w){
-        result <<- FALSE
-        msg <<- sprintf("Expected message, got warning:\n '%s'", w$message)
-      }
-  )
-  sink(file = NULL, type="message")
-  close(tc)
-  
-  # collapse the value string in case multiple messages were caught.
-  value <- paste(value, collapse="\n")
-  call <- sys.call(sys.parent(1))
-  # we got a warning or error instead of a message:
-  if (!result){
-    tinytest(
-        result
-      , call
-      , diff  = msg
-      , short = "xcpt" 
-    ) 
-  # we got a message, check if it matches 'pattern'
-  } else if ( !grepl(pattern, value ) ) {
-    tinytest(FALSE
-      , call
-      , diff = sprintf("The message\n '%s'\n doen not match pattern '%s'",value,pattern)
-      , short = "xcpt"
-    )
-  } else {
-    tinytest(TRUE, call)
-  }
-  
-}
-
-
-
 
 
 # reference object to store or ignore output
 # of 'expect' functions
 output <- function(){
   e <- new.env()
+  r <- 0 # number of results
   n <- 0 # number of tests
   m <- 0 # number of passes
+  s <- 0 # number of side-effects
   re <- "^T[0-9]+"
   e$add <- function(x){
-    n <<- n + 1
-    e[[sprintf("T%04d",n)]] <- x
-    m <<- m + as.integer(x)
+    r <<- r + 1
+    e[[sprintf("T%04d",r)]] <- x
+    if ( isTRUE(x) || isFALSE(x) ){
+        n <<- n + 1
+        m <<- m + as.integer(x)
+    } else if (is.na(x)){
+        s <<- s + 1
+    }
   }
   e$gimme <- function(){
     vr <- ls(e,pattern = re)
@@ -422,26 +30,60 @@ output <- function(){
     x <- ls(e,pattern = re)
     i <- x[length(x)]
     if ( isTRUE(e[[i]]) ) m <<- m - 1
+    # note: we never ignore a call to envdiff,
+    # so no need to check for is.na(e[i]).
     rm(list=i, envir=e)
     n <<- n-1
+    r <<- r-1
   }
   e$ntest <- function() n
   e$npass <- function() m
   e$nfail <- function() n - m
+  e$nside <- function() s
 
+  # metadata will be provided by run_test_file
+  e$fst <- 0
+  e$lst <- 0
+  e$call <- ""
+  e$file
+  
+  # will be set by exit_file()
+  e$exit <- FALSE
+  e$exitmsg <- ""
+  e$exit_msg <- function(print){
+    if(print){ 
+      plural <- e$lst != e$fst
+      if (plural) catf("\nExited '%s' at lines %d-%d. %s"
+                     , basename(e$file), e$fst, e$lst, e$exitmsg)
+      else catf("\nExited '%s' at line %d. %s"
+              , basename(e$file), e$fst, e$exitmsg)
+    }
+  }
+  
   e
 }
 
 
 capture <- function(fun, env){
+  # avoid lazy eval when looping over functions as a variable
+  # e.g. when loading extensions.
+  force(fun)
+
   function(...){
     out <- fun(...)
-    attr(out,"call") <- if (env$lst - env$fst >=3) match.call(fun) else env$call
-    attr(out,"file") <- env$file
-    attr(out,"fst")  <- env$fst
-    attr(out,"lst")  <- env$lst
-    env$add(out)
-    attr(out,"env") <- env
+    if ( inherits(out, "tinytest") ){
+      attr(out,"file") <- env$file
+      attr(out,"fst")  <- env$fst
+      attr(out,"lst")  <- env$lst
+      attr(out,"call") <- env$call
+      # if not NA, the result is from an expect_ function
+      # if NA, it is a side-effect, and we do not attempt to
+      # improve the call's format
+      if (!is.na(out) && env$lst - env$fst >=3) 
+        attr(out,"call") <- match.call(fun) 
+        env$add(out)
+        attr(out,"env") <- env
+    }
     out
   }
 }
@@ -502,6 +144,33 @@ ignore <- function(fun){
   }
 }
 
+#' Stop testing
+#'
+#' Call this function to exit a test file.
+#'
+#' @param msg \code{[character]} An optional message to print after exiting.
+#'
+#'
+#' @return The exit message
+#'
+#' @examples
+#' exit_file("I'm too tired to test")
+#'
+#' @family test-files
+#' @export
+exit_file <- function(msg="") msg
+
+# masking function to to call within run_test_file
+capture_exit <- function(fun, env){
+  function(...){
+    env$exit <- TRUE
+    env$exitmsg <- fun(...)
+  }
+}
+
+
+
+
 # we need a special capture function for 
 # Sys.setenv because it's return value does
 # not inlcude argument names (it is an unnamed 
@@ -542,16 +211,187 @@ reset_options <- function(env){
 }
 
 
+# envir : an environment where test files are evaluated
+# output: an environment where test results are captured
+add_locally_masked_functions <- function(envir, output){
+  
+  # Local masking of native functions. 'manually' because
+  # it is faster then loading via getFromNamespace()
+  envir$expect_equal        <- capture(expect_equal, output)
+  envir$expect_equivalent   <- capture(expect_equivalent, output)
+  envir$expect_true         <- capture(expect_true, output)
+  envir$expect_false        <- capture(expect_false, output)
+  envir$expect_null         <- capture(expect_null, output)
+  envir$expect_message      <- capture(expect_message, output)
+  envir$expect_warning      <- capture(expect_warning, output)
+  envir$expect_error        <- capture(expect_error, output)
+  envir$expect_identical    <- capture(expect_identical, output)
+  envir$expect_silent       <- capture(expect_silent, output)
+  envir$exit_file           <- capture_exit(exit_file, output)
+  envir$ignore              <- ignore
+  envir$at_home             <- tinytest::at_home
+
+  ## add 'checkFoo' equivalents of 'expect_foo' (native functions only)
+  if ( getOption("tt.RUnitStyle", TRUE) ) add_RUnit_style(envir)
+
+  envir$using  <- capture_using(using, envir, output)
+  
+}
+
+#' Use an extension package.
+#'
+#' Loads and attaches a package to the search path, and picks up the
+#' \pkg{tinytest} extension functions registered by the package. Package
+#' authors \emph{must} call this function in \emph{every} test file where an
+#' extension is used, or otherwise results from the extension package are not
+#' recorded (without a warning). Calling \code{using} in every file
+#' where an extension is used also ensures that tests can be run in parallel.
+#'
+#' 
+#' @param package the name of the extension package, given as name or character string.
+#' @param quietly Passed to \code{\link[base]{require}}.
+#'
+#' @return A named \code{list}, with the package name and the names of the
+#'   functions registered by \code{package} to extend \pkg{tinytest}. A message
+#'   is emitted when the package registers no extension functions.
+#'
+#' @examples
+#' \dontrun{
+#'   # In interactive session: see which functions are exported
+#'   # by checkmate.tinytest
+#'   out <- using(checkmate.tinytest)
+#'   print(out)
+#' }
+#'
+#' @family extensions
+#' @export
+using <- function(package, quietly=TRUE){
+  pkg <- as.character(substitute(package))
+  if ( !require(pkg, quietly=TRUE, character.only=TRUE) ){
+    stopf("Package %s could not be loaded",pkg)
+  }
+  ext <- getOption("tt.extensions", FALSE)
+  out <- if ( isFALSE(ext) ){
+    msgf("Package '%s' registered no tinytest extensions.")
+    list(character(0))
+  } else {
+    ext
+  }
+  names(out) <- pkg
+  invisible(out)
+}
+
+capture_using <- function(fun, envir, output){
+  function(...){
+    # call user-facing function
+    ext <- fun(...)
+    
+    # get package name
+    pkg <- names(ext)
+    functions <- ext[[pkg]]
+
+    for ( func in functions ){ # get funcy!
+      # get function object from namespace
+      f <- tryCatch(getFromNamespace(func, pkg)
+          , error = function(e){
+              msg <- sprintf("Loading '%s' extensions failed with message:\n'%s'"
+                            , pkg, e$message)
+              warning(msg, call.=FALSE)
+            })
+
+      # mask'm like there's no tomorrow 
+      envir[[func]] <- capture(f, output)
+      
+    }
+    invisible(ext)
+  }
+}
+
+
+#' Register or unregister extension functions
+#'
+#' Functions to use in \code{.onLoad} and \code{.onUnload} by packages that
+#' extend \pkg{tinytest}.
+#'
+#' @param pkg \code{[character]} scalar. Name of the package providing extensions.
+#' @param functions \code{[character]} vector. Name of the functions in the package that must be added.
+#'
+#'
+#' @section The tinytest API:
+#'
+#' Packages can extend \pkg{tinytest} with expectation functions \emph{if and only}
+#' if the following requirements are satisfied.
+#'
+#' \enumerate{
+#'  \item{The extending functions return a \code{\link{tinytest}} object.  This 
+#'        can be created by calling \code{tinytest()} with the arguments
+#'    \itemize{
+#'      \item{\code{result}: A \code{logical} scalar: \code{TRUE} or \code{FALSE} (not
+#'            \code{NA}) }
+#'      \item{\code{call}: The \code{call} to the expectation function. Usually the 
+#'            result of \code{sys.call(sys.parent(1))} }
+#'      \item{\code{diff}: A \code{character} scalar, with a long description of the 
+#'            difference. Sentences may be separated by \code{"\\n"}.}
+#'      \item{\code{short}: Either \code{"data"}, if the difference is in the 
+#'            data. \code{"attr"} when attributes differ or \code{"xcpt"} when 
+#'            an expectation about an exception is not met. If there are 
+#'            differences in data and in attributes, the attributes take 
+#'            precedence.}
+#'    }
+#'    Observe that this requires the extending package to add \pkg{tinytest} to 
+#'    the \code{Imports} field in the package's \code{DESCRIPTION} file (this 
+#'    also holds for the following requirement). 
+#'  }
+#' \item{Functions are registered in \code{.onLoad()} using 
+#'       \code{register_tinytest_extension()}. Functions that are already 
+#'       registered, including \pkg{tinytest} functions will be overwritten.}
+#' }
+#' It is \emph{recommended} to:
+#' \enumerate{
+#'   \item{Follow the syntax conventions of \pkg{tinytest} so expectation 
+#'         functions start with \code{expect_}.}
+#'   \item{Explain to users of the extension package how to use the extension 
+#'         (see \code{\link{using}}).}
+#' }
+#'
+#'
+#' @section Minimal example packages:
+#'
+#' \itemize{
+#'  \item{Extending \pkg{tinytest}:
+#'  \href{https://github.com/markvanderloo/tinytest.extension}{tinytest.extension}.}
+#'  \item{Using a \pkg{tinytest} extension:
+#'    \href{https://github.com/markvanderloo/uses.tinytest.extension}{using.tinytest.extension}.}
+#' }
+#' @family extensions
+#' @export 
+register_tinytest_extension <- function(pkg, functions){
+  ext <- getOption("tt.extensions",FALSE)
+  if (isFALSE(ext)){
+    L <-list(functions)
+    names(L) <- pkg
+    options(tt.extensions = L)
+  } else {
+    ext[[pkg]] <- functions
+    options(tt.extensions = ext)
+  }
+}
+
 
 
 #' Run an R file containing tests; gather results
 #'
 #' @param file \code{[character]} File location of a .R file.
 #' @param at_home \code{[logical]} toggle local tests.
-#' @param verbose \code{[logical]} toggle verbosity during execution
+#' @param verbose \code{[integer]} verbosity level. 0: be quiet, 1: print
+#'   status per file, 2: print status per test expression.
 #' @param color \code{[logical]} toggle colorize counts in verbose mode (see Note)
-#' @param remove_side_effects \code{[logical]} toggle remove user-defined side effects? See section on side effects.
-#'
+#' @param remove_side_effects \code{[logical]} toggle remove user-defined side
+#'   effects? See section on side effects.
+#' @param side_effects \code{[logical|list]} Either a logical,
+#' or a list of arguments to pass to \code{\link{report_side_effects}}.
+#' @param ... Currently unused
+#' 
 #' @details
 #'
 #' In \pkg{tinytest}, a test file is just an R script where some or all
@@ -562,8 +402,16 @@ reset_options <- function(env){
 #' @section User-defined side effects:
 #' 
 #' All calls to \code{\link[base]{Sys.setenv}} and \code{\link[base]{options}}
-#' defined in a test file are captured and undone once the test file has run.
+#' defined in a test file are captured and undone once the test file has run,
+#' if \code{remove_side_effects} is set to \code{TRUE}.
 #' 
+#' @section Tracking side effects:
+#'
+#' Certain side effects can be tracked, even when they are not explicitly evoked
+#' in the test file. See \code{\link{report_side_effects}} for details. 
+#' Calls to \code{report_side_effects} within the test file overrule
+#' settings provided with this function.
+#'
 #' 
 #'
 #' @note
@@ -581,8 +429,12 @@ reset_options <- function(env){
 #' tests <- "
 #' addOne <- function(x) x + 2
 #'
+#' Sys.setenv(lolz=2)
+#' 
 #' expect_true(addOne(0) > 0)
 #' expect_equal(2, addOne(1))
+#'
+#' Sys.unsetenv('lolz')
 #' "
 #' testfile <- tempfile(pattern="test_", fileext=".R")
 #' write(tests, testfile)
@@ -593,20 +445,27 @@ reset_options <- function(env){
 #' # print everything in short format, include passes in print.
 #' print(out, nlong=0, passes=TRUE)
 #'
+#' # run test file, track supported side-effects
+#' run_test_file(testfile, side_effects=TRUE)
+#' 
+#' # run test file, track only changes in working directory 
+#' run_test_file(testfile, side_effects=list(pwd=TRUE, envvar=FALSE))
+#'
+#'
 #' @family test-files
 #' @seealso \code{\link{ignore}}
 #' @export
 run_test_file <- function( file
                          , at_home=TRUE
-                         , verbose = getOption("tt.verbose", TRUE)
+                         , verbose = getOption("tt.verbose", 2)
                          , color   = getOption("tt.pr.color", TRUE)
-                         , remove_side_effects = TRUE ){
+                         , remove_side_effects = TRUE 
+                         , side_effects = FALSE
+                         , ...){
 
   if (!file_test("-f", file)){
     stop(sprintf("'%s' does not exist or is a directory",file),call.=FALSE)
   }
-  # convenience print function
-  catf <- function(fmt,...) if (verbose) cat(sprintf(fmt,...))
 
   ## where to come back after running the file
   oldwd <- getwd()
@@ -642,24 +501,13 @@ run_test_file <- function( file
 
   if (at_home) Sys.setenv(TT_AT_HOME=TRUE)
 
+  # An environment to capture the output in.
   o <- output()
-  # we sleeve the expectation functions so their
-  # output  will be captured in 'o'
+  # An environment to run the test scripts in
   e <- new.env(parent=globalenv())
-  e$expect_equal      <- capture(expect_equal, o)
-  e$expect_equivalent <- capture(expect_equivalent, o)
-  e$expect_true       <- capture(expect_true, o)
-  e$expect_false      <- capture(expect_false, o)
-  e$expect_message    <- capture(expect_message, o)
-  e$expect_warning    <- capture(expect_warning, o)
-  e$expect_error      <- capture(expect_error, o)
-  e$expect_identical  <- capture(expect_identical, o)
-  e$expect_silent     <- capture(expect_silent, o)
-  e$ignore            <- ignore
-  e$at_home           <- tinytest::at_home
-
-  ## add checkFoo equivalents of expect_foo
-  if ( getOption("tt.RUnitStyle", TRUE) ) add_RUnit_style(e)
+  # We locally mask expectation functions in the evaluation
+  # environment 'e' so their output  will be captured in 'o'
+  add_locally_masked_functions(envir = e, output=o)
 
   ## Reduce user side effects by making sure that any env var set 
   ## in a test file is unset after running it.
@@ -668,6 +516,15 @@ run_test_file <- function( file
   ## Reduce user side effects by capturing options that will be reset
   ## on exit
   e$options <- capture_options(options, oldop)
+
+  ## Make sure that we catch side-effects if the user asks for it.
+  # an environment to store side-effects, and wheter we report them.
+  sidefx <- new.env()
+  e$report_side_effects <- capture_se(report_side_effects, sidefx)
+  do.call(e$report_side_effects, as.list(side_effects))
+  # internal side-effect tracker: make sure results are exported to user.
+  local_report_envvar <- capture(report_envvar, o)
+  local_report_cwd    <- capture(report_cwd, o)
 
   # parse file, store source reference.
   parsed <- parse(file=file, keep.source=TRUE)
@@ -681,26 +538,41 @@ run_test_file <- function( file
   }  
   prfile <- paste("Running",gsub(" ",".",sprintf("%-30s",basename(file))))
 
-  # evaluate expressions one by one
+
   for ( i in seq_along(parsed) ){
     expr   <- parsed[[i]]
     o$fst  <- src[[i]][1]
     o$lst  <- src[[i]][3]
     o$call <- expr
-    out  <- eval(expr, envir=e)
-    
-    # print the test counter. 
-    catf("\r%s %4d tests ", prfile, o$ntest())
-    # print status after counter
-    if ( o$ntest() == 0 ) {} # print nothing if nothing was tested
-    else if ( o$nfail() == 0) catf(if(color) "\033[0;32mOK\033[0m" else "OK")
-    else catf(if (color) "\033[0;31m%d errors\033[0m" else "%d errors", o$nfail())
+    if ( !o$exit ) eval(expr, envir=e)
+    else {
+      o$exit_msg(verbose >= 1)
+      break
+    }
+    local_report_envvar(sidefx)
+    local_report_cwd(sidefx)
+    if (verbose == 2) print_status(prfile, o, color)
   }
-  catf("\n")
+  if (verbose == 1) print_status(prfile, o, color)
+  if (verbose >= 1) catf("\n")
   
-
+  # returns a 'list' of 'tinytest' objects
   test_output <- o$gimme()
   structure(test_output, class="tinytests")
+}
+
+
+print_status <- function(filename, env, color){
+  prefix <- sprintf("\r%s %4d tests", filename, env$ntest())
+  # print status after counter
+  fails <- if ( env$ntest() == 0 ) "  " # print nothing if nothing was tested
+  else if ( env$nfail() == 0 ) sprintf(if(color) "\033[0;32mOK\033[0m" else "OK")
+  else sprintf(if (color) "\033[0;31m%d fails\033[0m" else "%d fails", env$nfail())
+
+  side <- if (env$nside() == 0) ""
+  else  sprintf(if (color) "\033[0;93m%d side-effects\033[0m" else "%d side-effects", env$nside())  
+
+  cat(prefix, fails, side, sep=" ")
 }
 
 
@@ -720,23 +592,35 @@ run_test_file <- function( file
 #' @param remove_side_effects \code{[logical]} toggle remove user-defined side 
 #'  effects. Environment variables (\code{Sys.setenv()}) and options (\code{options()})
 #'  defined in a test file are reset before running the next test file (see details).
+#' @param cluster A \code{\link[parallel]{makeCluster}} object. 
 #' @param lc_collate \code{[character]} Locale setting used to sort the
 #'  test files into the order of execution. The default \code{NA} ensures
 #'  current locale is used. Set this e.g. to \code{"C"} to ensure bytewise
 #'  and more platform-independent sorting (see details).
+#' @param ... Arguments passed to \code{run_test_file}
 #'  
 #' @section Details:
 #'
-#' We cannot guarantee that files will be run in any particular
-#' order accross all platforms, as it depends on the available collation charts
-#' (a chart that determines how alphabets are sorted).  For this reason it is a
-#' good idea to create test files that run independent of each other so their
-#' order of execution does not matter. In tinytest, test files cannot share
-#' variables. The default behavior of test runners furher discourages
-#' interdependence by resetting environment variables and options that are set
-#' in a test file after the file is executed. If an environment variable needs
-#' to survive a single file, use \code{base::Sys.setenv()} explicitly.
-#' Similarly, if an option setting needs to survive, use \code{base::options}
+#' We cannot guarantee that files will be run in any particular order accross
+#' all platforms, as it depends on the available collation charts (a chart that
+#' determines how alphabets are sorted).  For this reason it is a good idea to
+#' create test files that run independent of each other so their order of
+#' execution does not matter. In tinytest, test files cannot share variables.
+#' The default behavior of test runners furher discourages interdependence by
+#' resetting environment variables and options that are set in a test file
+#' after the file is executed. If an environment variable needs to survive a
+#' single file, use \code{base::Sys.setenv()} explicitly.  Similarly, if an
+#' option setting needs to survive, use \code{base::options}
+#'
+#' @section Parallel tests:
+#'
+#' If \code{inherits(cluster, "cluster")} the tests are paralellized over a
+#' cluster of worker nodes. \pkg{tinytest} will be loaded onto each cluster
+#' node. All other preparation, including loading code from the tested package,
+#' must be done by the user. It is also up to the user to clean up the cluster
+#' after running tests. See the 'using tinytest' vignette for examples:
+#' \code{vignette("using_tinytest")}.
+#'
 #'
 #' @return A \code{tinytests} object
 #'
@@ -760,34 +644,45 @@ run_test_file <- function( file
 #' dat <- as.data.frame(out)
 #'
 #' @family test-files
+#' @seealso \code{\link[parallel]{makeCluster}},
+#' \code{\link[parallel]{clusterEvalQ}}, \code{\link[parallel]{clusterExport}}
 #'
 #' @export
 run_test_dir <- function(dir="inst/tinytest", pattern="^test.*\\.[rR]"
                        , at_home = TRUE
-                       , verbose = getOption("tt.verbose",TRUE)
+                       , verbose = getOption("tt.verbose", 2)
                        , color   = getOption("tt.pr.color",TRUE)
                        , remove_side_effects = TRUE
-                       , lc_collate = getOption("tt.collate",NA) ){
-  oldwd <- getwd()
-  on.exit( setwd(oldwd) )
-  setwd(dir)
+                       , cluster = NULL
+                       , lc_collate = getOption("tt.collate",NA)
+                       , ... ){
 
-  testfiles <- dir("./", pattern=pattern, full.names=TRUE)
+
+  testfiles <- dir(dir, pattern=pattern, full.names=TRUE)
   testfiles <- locale_sort(testfiles, lc_collate=lc_collate)
-  
 
 
-  test_output <- list()
 
-  for ( file in testfiles ){
-    test_output <- c(test_output
-                   , run_test_file(file
-                                 , at_home = at_home
-                                 , verbose = verbose
-                                 , color   = color
-                                 , remove_side_effects = remove_side_effects))
+  if ( !inherits(cluster, "cluster") ){
+    # set pwd here, to save time in run_test_file.
+    oldwd <- getwd()
+    on.exit(setwd(oldwd))
+    setwd(dir)  
+    test_output <- lapply(basename(testfiles), run_test_file
+                           , at_home = at_home
+                           , verbose = verbose
+                           , color   = color
+                           , remove_side_effects = remove_side_effects
+                           , ...)
+  } else {
+    parallel::clusterEvalQ(cluster, library(tinytest))           
+    test_output <- parallel::parLapply(cluster, testfiles
+        , run_test_file, at_home = at_home, verbose = min(verbose,1)
+        , color = color, remove_side_effects = TRUE, ...)
   }
-    structure(test_output,class="tinytests")
+  # by using '(parL)|(l)apply' we get a list of tinytests objects. We need to unwind
+  # one level to a list of 'tinytest' objects and class it 'tinytests'.
+  structure(unlist(test_output,recursive=FALSE), class="tinytests")
 }
 
 
@@ -819,19 +714,19 @@ locale_sort <- function(x, lc_collate=NA, ...){
 
 #' Test a package during development
 #'
-#' \code{test_all} is a convenience function for package development, that wraps
-#' \code{run_test_dir}. By default, it runs all files starting with
-#' \code{test} in \code{./inst/tinytest/}.  It is assumed that all functions to be
-#' tested are loaded.
+#' \code{test_all} is a convenience function for package development, that
+#' wraps \code{run_test_dir}. By default, it runs all files starting with
+#' \code{test} in \code{./inst/tinytest/}.  It is assumed that all functions to
+#' be tested are loaded.
 #'
 #'
 #' @param pkgdir \code{[character]} scalar. Root directory of the package (i.e.
 #'   direcory where \code{DESCRIPTION} and \code{NAMESPACE} reside).
 #' @param testdir \code{[character]} scalar. Subdirectory where test files are
 #'   stored.
-#' @param ... passed to \code{run_test_dir}.
 #'
 #' @rdname run_test_dir
+#'
 #' @export
 test_all <- function(pkgdir="./", testdir="inst/tinytest", ...){
   run_test_dir( file.path(pkgdir,testdir), ...)
@@ -865,7 +760,8 @@ at_home <- function(){
 #' @param testdir \code{[character]} scalar. Path to installed directory, relative
 #' to the working directory of \code{R CMD check}.
 #' @param at_home \code{[logical]} scalar. Are we at home? (see Details)
-#' @param ... extra arguments, passed to \code{\link{run_test_dir}}
+#' @param ncpu A positive integer, or a \code{\link[parallel]{makeCluster}} object.
+#' @param ... extra arguments passed to \code{\link{run_test_dir}} (e.g. \code{ncpu}).
 #'
 #'
 #' @section Details:
@@ -884,33 +780,51 @@ at_home <- function(){
 #' # Create a file with the following content, to use
 #' # tinytest as your unit testing framework:
 #'   if (requireNamespace("tinytest", quietly=TRUE))
-#'     test_package("your package name")
+#'     tinytest::test_package("your package name")
 #' }
 #' @export
-test_package <- function(pkgname, testdir = "tinytest", at_home=FALSE, ...){
-  oldwd <- getwd()
-  on.exit(setwd(oldwd))
-  require(pkgname, character.only=TRUE) 
+test_package <- function(pkgname, testdir = "tinytest"
+                       , at_home=FALSE, ncpu=NULL, ...){
+  on.exit({
+    if ( is.numeric(ncpu) ) parallel::stopCluster(cluster)
+  })
+
   testdir <- system.file(testdir, package=pkgname)
-  setwd(testdir)
-  
-  out <- run_test_dir("./", at_home=at_home, ...) 
+  if ( testdir == "" ){
+    stopf("testdir '%s' not found for package '%s'",testdir, pkgname)
+  }
+
+  # set up cluster if required
+  cluster <- if (is.null(ncpu)) NULL
+             else if (is.numeric(ncpu)) parallel::makeCluster(ncpu, outfile="")
+             else if (inherits(ncpu, "cluster")) ncpu
+             else stop("ncpu must be NULL, 'numeric', or 'cluster'")
+
+  # By now we have a cluster, or NULL. Load the pkg under scrutiny.
+  if ( is.null(cluster) ){
+    library(pkgname, character.only=TRUE)
+  } else {
+    parallel::clusterCall(cluster, library, pkgname, character.only=TRUE)
+  }
+
+  out <- run_test_dir(testdir, at_home=at_home, cluster=cluster,...) 
   i_fail <- sapply(out, isFALSE)
   if ( any(i_fail) ){
     msg <- paste( sapply(out[i_fail], format.tinytest, type="long"), collapse="\n")
     msg <- paste(msg, "\n")
     if (!interactive()) stop(msg, call.=FALSE)
   } else {
-    invisible(out)
+    out
   }
 }
 
 
 #' build, install and test
 #'
-#' Builds and installs the package in \code{pkgdir} under a temporary directory.
-#' Next, loads the package in a fresh R session and runs all the tests. For this
-#' function to work the following system requirements are necessary.
+#' Builds and installs the package in \code{pkgdir} under a temporary
+#' directory.  Next, loads the package in a fresh R session and runs all the
+#' tests. For this function to work the following system requirements are
+#' necessary.
 #' \itemize{
 #'   \item{\code{R CMD build} is available on your system}
 #'   \item{\code{Rscript} is available on your system}
@@ -918,12 +832,13 @@ test_package <- function(pkgname, testdir = "tinytest", at_home=FALSE, ...){
 #'
 #' @param pkgdir \code{[character]} Package directory
 #' @param testdir \code{[character]} Name of directory under \code{pkgdir/inst}
-#'    containing test files.
+#'   containing test files.
 #' @param at_home \code{[logical]} toggle local tests.
+#' @param ncpu \code{[numeric]} number of CPUs to use during the testing phase.
 #' @param verbose \code{[logical]} toggle verbosity during execution
 #' @param keep_tempdir \code{[logical]} keep directory where the pkg is
-#'   installed and where tests are run? If \code{TRUE}, the directory is not deleted
-#'   and it's location is printed.
+#'   installed and where tests are run? If \code{TRUE}, the directory is not
+#'   deleted and it's location is printed.
 #'
 #'
 #' @return A \code{tinytests} object.
@@ -937,7 +852,8 @@ test_package <- function(pkgname, testdir = "tinytest", at_home=FALSE, ...){
 #' @export
 build_install_test <- function(pkgdir="./", testdir="tinytest"
                              , at_home=TRUE
-                             , verbose=getOption("tt.verbose",TRUE)
+                             , verbose=getOption("tt.verbose",2)
+                             , ncpu = 1
                              , keep_tempdir=FALSE){
   oldwd <- getwd()
   tdir  <- tempfile()
@@ -970,15 +886,39 @@ build_install_test <- function(pkgdir="./", testdir="tinytest"
   ## In a fresh R session, load package and run tests
   script <- "
 suppressPackageStartupMessages({
+  pkgname <- '%s'
+  tdir    <- '%s'
+  testdir <- '%s'
+  at_home <- %s
+  verbose <- %d
+  ncpu    <- %d
+
   #        pkgname       tdir
-  library('%s', lib.loc='%s',character.only=TRUE)
+  library(pkgname, lib.loc=tdir,character.only=TRUE)
   library('tinytest')
 })
-#                                testdir       pkgname       tdir          at_home     verbose
-out <- run_test_dir(system.file('%s', package='%s', lib.loc='%s'), at_home=%s, verbose=%s)
+
+if (ncpu > 1){
+  cluster <- parallel::makeCluster(ncpu, outfile='')
+  parallel::clusterCall(cluster, library, pkgname, character.only=TRUE)
+} else {
+  cluster <- NULL
+}
+#                                testdir       pkgname       tdir
+out <- run_test_dir(system.file(testdir, package=pkgname, lib.loc=tdir)
+               , at_home=at_home, verbose=verbose,cluster=cluster)
+
 saveRDS(out, file='output.RDS')
+
+if (!is.null(cluster)) parallel::stopCluster(cluster)
 "
-  scr <- sprintf(script, pkgname, tdir,testdir, pkgname,tdir, at_home, verbose)
+  scr <- sprintf(script
+        , pkgname
+        , normalizePath(tdir, winslash="/", mustWork=FALSE)
+        , testdir
+        , at_home
+        , verbose
+        , ncpu)
 
   write(scr, file="test.R")
   system("Rscript test.R")
