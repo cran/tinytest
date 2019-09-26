@@ -4,7 +4,8 @@
 \alias{report_side_effects}
 \title{Report side effects for expressions in test files}
 \usage{
-report_side_effects(report = TRUE, envvar = report, pwd = report)
+report_side_effects(report = TRUE, envvar = report, pwd = report,
+  files = report)
 }
 \arguments{
 \item{report}{\code{[logical]} report all side-effects}
@@ -12,6 +13,9 @@ report_side_effects(report = TRUE, envvar = report, pwd = report)
 \item{envvar}{\code{[logical]} changes in environment variables}
 
 \item{pwd}{\code{[logical]} changes in working directory}
+
+\item{files}{\code{[logical]} changes in files in the directory where the
+test file lives. Also watches subdirectories.}
 }
 \value{
 A named \code{logical}, indicating which aspects of the environment

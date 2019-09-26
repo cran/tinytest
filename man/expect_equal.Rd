@@ -13,25 +13,27 @@
 \alias{expect_message}
 \title{Express expectations}
 \usage{
-expect_equal(current, target, tol = sqrt(.Machine$double.eps), ...)
+expect_equal(current, target, tol = sqrt(.Machine$double.eps),
+  info = NA_character_, ...)
 
-expect_identical(current, target)
+expect_identical(current, target, info = NA_character_)
 
-expect_equivalent(current, target, tol = sqrt(.Machine$double.eps), ...)
+expect_equivalent(current, target, tol = sqrt(.Machine$double.eps),
+  info = NA_character_, ...)
 
-expect_true(current)
+expect_true(current, info = NA_character_)
 
-expect_false(current)
+expect_false(current, info = NA_character_)
 
-expect_silent(current, quiet = TRUE)
+expect_silent(current, quiet = TRUE, info = NA_character_)
 
-expect_null(current)
+expect_null(current, info = NA_character_)
 
-expect_error(current, pattern = ".*")
+expect_error(current, pattern = ".*", info = NA_character_)
 
-expect_warning(current, pattern = ".*")
+expect_warning(current, pattern = ".*", info = NA_character_)
 
-expect_message(current, pattern = ".*")
+expect_message(current, pattern = ".*", info = NA_character_)
 }
 \arguments{
 \item{current}{\code{[R object or expression]} Outcome or expression under scrutiny.}
@@ -40,6 +42,10 @@ expect_message(current, pattern = ".*")
 
 \item{tol}{\code{[numeric]} Test equality to machine rounding. Passed
 to \code{\link[base]{all.equal} (tolerance)}}
+
+\item{info}{\code{[character]} scalar. Optional user-defined message. Must
+be a single character string. Multiline comments may be separated by
+\code{"\\n"}.}
 
 \item{...}{Passed to \code{all.equal}}
 

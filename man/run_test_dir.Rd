@@ -5,7 +5,7 @@
 \alias{test_all}
 \title{Run all tests in a directory}
 \usage{
-run_test_dir(dir = "inst/tinytest", pattern = "^test.*\\\\.[rR]",
+run_test_dir(dir = "inst/tinytest", pattern = "^test.*\\\\.[rR]$",
   at_home = TRUE, verbose = getOption("tt.verbose", 2),
   color = getOption("tt.pr.color", TRUE), remove_side_effects = TRUE,
   cluster = NULL, lc_collate = getOption("tt.collate", NA), ...)

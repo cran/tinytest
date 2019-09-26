@@ -6,6 +6,7 @@
 \usage{
 build_install_test(pkgdir = "./", testdir = "tinytest",
   at_home = TRUE, verbose = getOption("tt.verbose", 2), ncpu = 1,
+  remove_side_effects = TRUE, side_effects = FALSE,
   keep_tempdir = FALSE)
 }
 \arguments{
@@ -19,6 +20,12 @@ containing test files.}
 \item{verbose}{\code{[logical]} toggle verbosity during execution}
 
 \item{ncpu}{\code{[numeric]} number of CPUs to use during the testing phase.}
+
+\item{remove_side_effects}{\code{[logical]} toggle remove user-defined side
+effects? See section on side effects.}
+
+\item{side_effects}{\code{[logical|list]} Either a logical,
+or a list of arguments to pass to \code{\link{report_side_effects}}.}
 
 \item{keep_tempdir}{\code{[logical]} keep directory where the pkg is
 installed and where tests are run? If \code{TRUE}, the directory is not

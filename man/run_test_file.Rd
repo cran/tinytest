@@ -38,6 +38,9 @@ In \pkg{tinytest}, a test file is just an R script where some or all
 of the statements express an \code{\link[=expect_equal]{expectation}}.
 \code{run_test_file} runs the file while gathering results of the
 expectations in a \code{\link{tinytests}} object.
+
+The graphics device is set to \code{pdf(file=tempfile())} for the run of the
+test file.
 }
 \note{
 Not all terminals support ansi escape characters, so colorized output can be
@@ -58,7 +61,8 @@ if \code{remove_side_effects} is set to \code{TRUE}.
 
 
 Certain side effects can be tracked, even when they are not explicitly evoked
-in the test file. See \code{\link{report_side_effects}} for details. 
+in the test file. See \code{\link{report_side_effects}} for side effects tracked
+by \pkg{tinytest}.
 Calls to \code{report_side_effects} within the test file overrule
 settings provided with this function.
 }

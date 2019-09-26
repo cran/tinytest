@@ -5,7 +5,8 @@
 \title{Tinytest constructor}
 \usage{
 tinytest(result, call, diff = NA_character_, short = NA_character_,
-  file = NA_character_, fst = NA_integer_, lst = NA_integer_, ...)
+  info = NA_character_, file = NA_character_, fst = NA_integer_,
+  lst = NA_integer_, ...)
 }
 \arguments{
 \item{result}{\code{[logical]} scalar.}
@@ -16,6 +17,8 @@ tinytest(result, call, diff = NA_character_, short = NA_character_,
 (if any).}
 
 \item{short}{\code{[character]} short description of the difference}
+
+\item{info}{\code{[character]} other information, to be printed in the long message}
 
 \item{file}{\code{[character]} File location of the test.}
 

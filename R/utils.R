@@ -6,3 +6,5 @@ warnf <- function(fmt,...) warning(sprintf(fmt,...), call.=FALSE)
 msgf  <- function(fmt, ...) message(sprintf(fmt,...))
 
 
+
+

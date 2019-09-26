@@ -34,11 +34,21 @@ setup_tinytest <- function(pkgdir, force=FALSE, verbose=TRUE){
     stopf("%s does not exist or is not a directory", pkgdir)
   }
 
+  # fields in DESCRIPTION that escape reformatting
+  kw <- c("Title"
+      , "Maintainer"
+      , "Authors", "Authors@R"
+      , "Description"
+      , "Depends"
+      , "Imports"
+      , "Suggests"
+      , "Enhances")
+
   ## Get pkg name form DESCRIPTION
   dfile <- file.path(pkgdir,"DESCRIPTION")
   if (file.exists(dfile)){
-    dcf <- read.dcf(dfile)
-    pkgname <- dcf[1]
+    dcf <- read.dcf(dfile, keep.white=kw)
+    pkgname <- dcf[, "Package"]
   } else {
     stopf("No DESCRIPTION file in %s",pkgdir)
   }
@@ -96,11 +106,11 @@ expect_equal(1 + 1, 2)
   if (!is.na(suggests) && !grepl("tinytest",suggests)){
     catf("Adding 'tinytest' to DESCRIPTION/Suggests\n")
     dcf[1,"Suggests"] <- sprintf("%s, tinytest",suggests)
-    write.dcf(dcf, dfile)
+    write.dcf(dcf, dfile, keep.white=kw)
   } else if ( is.na(suggests) ) {
     catf("Adding 'Suggests: tinytest' to DESCRIPTION\n")
     dcf <- cbind(dcf, Suggests = "tinytest")
-    write.dcf(dcf, dfile)
+    write.dcf(dcf, dfile, keep.white=kw)
   }
 
   # If another test package is already present, perhaps the user
