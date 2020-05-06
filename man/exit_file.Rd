@@ -20,9 +20,11 @@ exit_file("I'm too tired to test")
 
 }
 \seealso{
-Other test-files: \code{\link{build_install_test}},
-  \code{\link{run_test_dir}}, \code{\link{run_test_file}},
-  \code{\link{summary.tinytests}},
-  \code{\link{test_package}}
+Other test-files: 
+\code{\link{build_install_test}()},
+\code{\link{run_test_dir}()},
+\code{\link{run_test_file}()},
+\code{\link{summary.tinytests}()},
+\code{\link{test_package}()}
 }
 \concept{test-files}

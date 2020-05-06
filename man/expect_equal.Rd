@@ -11,15 +11,26 @@
 \alias{expect_error}
 \alias{expect_warning}
 \alias{expect_message}
+\alias{expect_stdout}
 \title{Express expectations}
 \usage{
-expect_equal(current, target, tol = sqrt(.Machine$double.eps),
-  info = NA_character_, ...)
+expect_equal(
+  current,
+  target,
+  tolerance = sqrt(.Machine$double.eps),
+  info = NA_character_,
+  ...
+)
 
 expect_identical(current, target, info = NA_character_)
 
-expect_equivalent(current, target, tol = sqrt(.Machine$double.eps),
-  info = NA_character_, ...)
+expect_equivalent(
+  current,
+  target,
+  tolerance = sqrt(.Machine$double.eps),
+  info = NA_character_,
+  ...
+)
 
 expect_true(current, info = NA_character_)
 
@@ -29,18 +40,30 @@ expect_silent(current, quiet = TRUE, info = NA_character_)
 
 expect_null(current, info = NA_character_)
 
-expect_error(current, pattern = ".*", info = NA_character_)
+expect_error(current, pattern = ".*", class = "error", info = NA_character_)
 
-expect_warning(current, pattern = ".*", info = NA_character_)
+expect_warning(
+  current,
+  pattern = ".*",
+  class = "warning",
+  info = NA_character_
+)
 
-expect_message(current, pattern = ".*", info = NA_character_)
+expect_message(
+  current,
+  pattern = ".*",
+  class = "message",
+  info = NA_character_
+)
+
+expect_stdout(current, pattern = ".*", info = NA_character_)
 }
 \arguments{
 \item{current}{\code{[R object or expression]} Outcome or expression under scrutiny.}
 
 \item{target}{\code{[R object or expression]} Expected outcome}
 
-\item{tol}{\code{[numeric]} Test equality to machine rounding. Passed
+\item{tolerance}{\code{[numeric]} Test equality to machine rounding. Passed
 to \code{\link[base]{all.equal} (tolerance)}}
 
 \item{info}{\code{[character]} scalar. Optional user-defined message. Must
@@ -53,6 +76,9 @@ be a single character string. Multiline comments may be separated by
 expression (see examples)}
 
 \item{pattern}{\code{[character]} A regular expression to match the message.}
+
+\item{class}{\code{[character]} For condition signals (error, warning, message)
+the class from which the condition should inherit.}
 }
 \value{
 A \code{\link{tinytest}} object. A tinytest object is a
@@ -67,6 +93,10 @@ Express expectations
 arguments \code{check.attributes=FALSE} and \code{use.names=FALSE}
 
 \code{expect_silent} fails when an error or warning is thrown.
+
+\code{expect_stdout} Expects that output is written to \code{stdout},
+for example using \code{cat} or \code{print}. Use \code{pattern} to
+specify a regular expression matching the output.
 }
 \note{
 Each \code{expect_haha} function can also be called as \code{checkHaha}.
@@ -98,6 +128,8 @@ expect_silent(print("hihi", quiet=FALSE)) # FALSE, and printed
 
 }
 \seealso{
-Other test-functions: \code{\link{ignore}}
+Other test-functions: 
+\code{\link{expect_equal_to_reference}()},
+\code{\link{ignore}()}
 }
 \concept{test-functions}

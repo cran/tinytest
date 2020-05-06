@@ -24,10 +24,14 @@ any_fail(x)
 
 \method{[}{tinytests}(x, i)
 
-\method{print}{tinytests}(x, passes = getOption("tt.pr.passes", FALSE),
+\method{print}{tinytests}(
+  x,
+  passes = getOption("tt.pr.passes", FALSE),
   sidefx = getOption("tt.pr.sidefx", TRUE),
-  limit = getOption("tt.pr.limit", 7), nlong = getOption("tt.pr.nlong",
-  3), ...)
+  limit = getOption("tt.pr.limit", 7),
+  nlong = getOption("tt.pr.nlong", 3),
+  ...
+)
 
 \method{as.data.frame}{tinytests}(x, ...)
 }
@@ -112,8 +116,11 @@ out[1]
 
 }
 \seealso{
-Other test-files: \code{\link{build_install_test}},
-  \code{\link{exit_file}}, \code{\link{run_test_dir}},
-  \code{\link{run_test_file}}, \code{\link{test_package}}
+Other test-files: 
+\code{\link{build_install_test}()},
+\code{\link{exit_file}()},
+\code{\link{run_test_dir}()},
+\code{\link{run_test_file}()},
+\code{\link{test_package}()}
 }
 \concept{test-files}

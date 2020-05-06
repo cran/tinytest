@@ -20,10 +20,13 @@ expect_error(any_pass("hihi"))
 expect_error(all_fail("hihi"))
 expect_error(any_fail("hihi"))
 
+
+
 # collect side effects using the call in the test file
 out <- run_test_file("runs/test_envvar.R",verbose=0)
 expect_true(is.na(out[[2]]))
 expect_equal(sum(is.na(sapply(out, c))),1)
+
 
 out <- run_test_file("runs/test_cwd.R", verbose=0)
 expect_true(is.na(out[[1]]))
@@ -44,5 +47,10 @@ expect_equal(length(out), 2)
 # plots should not cause an 'Rplots.pdf' file being created
 plot(1:10, 1:10)
 expect_false(exists("Rplots.pdf"))
+
+
+# test that files are run with environment variables set
+out <- run_test_file("runs/test_set_env.R", set_env=list("wa_babalooba"="ba_la_bamboo"))
+expect_true(all_pass(out))
 
 

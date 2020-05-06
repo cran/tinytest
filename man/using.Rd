@@ -34,7 +34,8 @@ where an extension is used also ensures that tests can be run in parallel.
 
 }
 \seealso{
-Other extensions: \code{\link{register_tinytest_extension}},
-  \code{\link{tinytest}}
+Other extensions: 
+\code{\link{register_tinytest_extension}()},
+\code{\link{tinytest}()}
 }
 \concept{extensions}

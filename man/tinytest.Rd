@@ -4,9 +4,17 @@
 \alias{tinytest}
 \title{Tinytest constructor}
 \usage{
-tinytest(result, call, diff = NA_character_, short = NA_character_,
-  info = NA_character_, file = NA_character_, fst = NA_integer_,
-  lst = NA_integer_, ...)
+tinytest(
+  result,
+  call,
+  diff = NA_character_,
+  short = c(NA_character_, "data", "attr", "xcpt", "envv", "wdir", "file"),
+  info = NA_character_,
+  file = NA_character_,
+  fst = NA_integer_,
+  lst = NA_integer_,
+  ...
+)
 }
 \arguments{
 \item{result}{\code{[logical]} scalar.}
@@ -59,8 +67,9 @@ if (isTRUE(tt)){
 
 }
 \seealso{
-Other extensions: \code{\link{register_tinytest_extension}},
-  \code{\link{using}}
+Other extensions: 
+\code{\link{register_tinytest_extension}()},
+\code{\link{using}()}
 }
 \concept{extensions}
 \keyword{internal}

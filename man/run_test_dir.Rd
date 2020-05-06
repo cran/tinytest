@@ -5,10 +5,17 @@
 \alias{test_all}
 \title{Run all tests in a directory}
 \usage{
-run_test_dir(dir = "inst/tinytest", pattern = "^test.*\\\\.[rR]$",
-  at_home = TRUE, verbose = getOption("tt.verbose", 2),
-  color = getOption("tt.pr.color", TRUE), remove_side_effects = TRUE,
-  cluster = NULL, lc_collate = getOption("tt.collate", NA), ...)
+run_test_dir(
+  dir = "inst/tinytest",
+  pattern = "^test.*\\\\.[rR]$",
+  at_home = TRUE,
+  verbose = getOption("tt.verbose", 2),
+  color = getOption("tt.pr.color", TRUE),
+  remove_side_effects = TRUE,
+  cluster = NULL,
+  lc_collate = getOption("tt.collate", NA),
+  ...
+)
 
 test_all(pkgdir = "./", testdir = "inst/tinytest", ...)
 }
@@ -63,11 +70,11 @@ all platforms, as it depends on the available collation charts (a chart that
 determines how alphabets are sorted).  For this reason it is a good idea to
 create test files that run independent of each other so their order of
 execution does not matter. In tinytest, test files cannot share variables.
-The default behavior of test runners furher discourages interdependence by
+The default behavior of test runners further discourages interdependence by
 resetting environment variables and options that are set in a test file
 after the file is executed. If an environment variable needs to survive a
 single file, use \code{base::Sys.setenv()} explicitly.  Similarly, if an
-option setting needs to survive, use \code{base::options}
+option setting needs to survive, use \code{base::options()}
 }
 
 \section{Parallel tests}{
@@ -104,9 +111,11 @@ dat <- as.data.frame(out)
 \code{\link[parallel]{makeCluster}},
 \code{\link[parallel]{clusterEvalQ}}, \code{\link[parallel]{clusterExport}}
 
-Other test-files: \code{\link{build_install_test}},
-  \code{\link{exit_file}}, \code{\link{run_test_file}},
-  \code{\link{summary.tinytests}},
-  \code{\link{test_package}}
+Other test-files: 
+\code{\link{build_install_test}()},
+\code{\link{exit_file}()},
+\code{\link{run_test_file}()},
+\code{\link{summary.tinytests}()},
+\code{\link{test_package}()}
 }
 \concept{test-files}

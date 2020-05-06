@@ -55,13 +55,13 @@ isFALSE <- function(x){
 #' @export
 tinytest <- function(result, call
     , diff = NA_character_
-    , short= NA_character_
+    , short= c(NA_character_,"data","attr","xcpt", "envv","wdir","file")
     , info = NA_character_
     , file = NA_character_
     , fst  = NA_integer_
     , lst  = NA_integer_
     ,...){
-
+  short <- match.arg(short)
   structure(result         # logical TRUE/FALSE
     , class    = "tinytest"
     , call     = call  # call creating or motivating the object
@@ -200,7 +200,7 @@ shortdiff <- function(current, target, ...){
 #'
 #' @param current \code{[R object or expression]} Outcome or expression under scrutiny.
 #' @param target \code{[R object or expression]} Expected outcome
-#' @param tol \code{[numeric]} Test equality to machine rounding. Passed
+#' @param tolerance \code{[numeric]} Test equality to machine rounding. Passed
 #'     to \code{\link[base]{all.equal} (tolerance)}
 #' @param info \code{[character]} scalar. Optional user-defined message. Must
 #'  be a single character string. Multiline comments may be separated by
@@ -233,12 +233,12 @@ shortdiff <- function(current, target, ...){
 #' expect_equal(2, c(x=2))      # FALSE
 #'
 #' @export
-expect_equal <- function(current, target, tol = sqrt(.Machine$double.eps), info=NA_character_, ...){
+expect_equal <- function(current, target, tolerance = sqrt(.Machine$double.eps), info=NA_character_, ...){
 
-  check <- all.equal(target, current, tol=tol, ...)
+  check <- all.equal(target, current, tolerance=tolerance, ...)
   equal <- isTRUE(check)
   diff  <- if (equal) NA_character_ else longdiff( current, target, check) 
-  short <- if (equal) NA_character_ else shortdiff(current, target, tolerance=tol)
+  short <- if (equal) NA_character_ else shortdiff(current, target, tolerance=tolerance)
 
   tinytest(result = equal, call = sys.call(sys.parent(1)), diff=diff, short=short, info=info)
 }
@@ -266,11 +266,11 @@ expect_identical <- function(current, target, info=NA_character_){
 #'
 #' @rdname expect_equal
 #' @export
-expect_equivalent <- function(current, target, tol = sqrt(.Machine$double.eps)
+expect_equivalent <- function(current, target, tolerance = sqrt(.Machine$double.eps)
                             , info=NA_character_, ...){
   out <- expect_equal(current, target
           , check.attributes=FALSE,use.names=FALSE
-          , tol=tol, info=info, ...)
+          , tolerance=tolerance, info=info, ...)
   attr(out, 'call') <- sys.call(sys.parent(1))
   out
 }
@@ -401,17 +401,25 @@ expect_null <- function(current, info=NA_character_){
 
 #' @rdname expect_equal
 #' @param pattern \code{[character]} A regular expression to match the message.
+#' @param class \code{[character]} For condition signals (error, warning, message)
+#'        the class from which the condition should inherit.
 #' @export
-expect_error <- function(current, pattern=".*", info=NA_character_){
+expect_error <- function(current, pattern=".*", class="error", info=NA_character_){
   result <- FALSE
   diff <- "No error"
   
   tryCatch(current, error=function(e){
-            if (grepl(pattern, e$message)){
-                result <<- TRUE
-            } else {
+            matches <- grepl(pattern, e$message)
+            isclass <- inherits(e, class)
+
+            if (matches && isclass){
+              result <<- TRUE
+            } else if (!isclass){
+              diff <<- sprintf("Error of class '%s', does not inherit from '%s'"
+                              , paste(class(e), collapse=", "), class)
+            } else if (!matches){
               diff <<- sprintf("The error message:\n '%s'\n does not match pattern '%s'"
-                             , e$message, pattern)
+                              , e$message, pattern)
             }
   })
   tinytest(result, call = sys.call(sys.parent(1))
@@ -422,16 +430,22 @@ expect_error <- function(current, pattern=".*", info=NA_character_){
 
 #' @rdname expect_equal
 #' @export
-expect_warning <- function(current, pattern=".*", info=NA_character_){
+expect_warning <- function(current, pattern=".*", class="warning", info=NA_character_){
   
   result <- FALSE
   diff <- "No warning"
 
   withCallingHandlers(current
     , warning = function(w){
-        if (grepl(pattern, w$message)){
+        matches <- grepl(pattern, w$message)
+        isclass <- inherits(w, class)
+
+        if ( matches && isclass ){
           result <<- TRUE
-        } else {
+        } else if ( !isclass ){
+          diff <<- sprintf("Warning of class '%s', does not inherit from '%s'"
+                          , paste(class(w), collapse=", "), class)
+        } else if (!matches){
           diff <<- sprintf("The warning message\n '%s'\n does not match pattern '%s'"
                           , w$message, pattern)
         }
@@ -448,55 +462,175 @@ expect_warning <- function(current, pattern=".*", info=NA_character_){
 
 #' @rdname expect_equal
 #' @export
-expect_message <- function(current, pattern=".*", info=NA_character_){
-  value <- ""
-  tc <- textConnection("value", open="w", local=TRUE)
-  sink(file=tc,type="message", split=FALSE)
+expect_message <- function(current, pattern=".*", class="message", info=NA_character_){
+#  value <- ""
+#  tc <- textConnection("value", open="w", local=TRUE)
+#  sink(file=tc,type="message", split=FALSE)
   
 
-  result <- TRUE
+  result <- FALSE
   msg    <- ""
   tryCatch(current
     , error = function(e){
-        result <<- FALSE
         msg <<- sprintf("Expected message, got error:\n '%s'",e$message)
       }
     , warning = function(w){
-        result <<- FALSE
         msg <<- paste(sprintf("Expected message, got warning:\n '%s'", w$message)
                     , collapse="\n")
       }
+    , message = function(m){
+        matches <- grepl(pattern, m$message)
+        isclass <- inherits(m, class)
+        if (matches && isclass){
+          result <<- TRUE
+        } else if (!isclass){
+          result <<- FALSE
+          msg <<- sprintf("Message of class '%s', does not inherit from '%s'"
+                          , paste(class(m), collapse=", "), class)
+        } else if (!matches){
+          msg <<- sprintf("The message message\n '%s'\n does not match pattern '%s'"
+                          , m$message, pattern)
+        }
+      }
   )
-  sink(file = NULL, type="message")
-  close(tc)
+#  sink(file = NULL, type="message")
+#  close(tc)
   
-  # collapse the value string in case multiple messages were caught.
-  value <- paste(value, collapse="\n")
-  call <- sys.call(sys.parent(1))
-  # we got a warning or error instead of a message:
-  if (!result){
-    tinytest(
-        result
-      , call
-      , diff  = msg
-      , short = "xcpt" 
-      , info  = info
-    ) 
-  # we got a message, check if it matches 'pattern'
-  } else if (!isTRUE(grepl(pattern, value)) ){
-    df <- if (value == "") "No message"
-          else sprintf("The message\n '%s'\n doen not match pattern '%s'",value,pattern)
-    tinytest(FALSE
-      , call
-      , diff = df
-      , short = "xcpt"
-      , info  = info
-    )
-  } else {
-    tinytest(TRUE, call, info=info)
-  }
-  
+  tinytest(result, call = sys.call(sys.parent(1))
+           , short= if(result) NA_character_ else "xcpt"
+           , diff = if(result) NA_character_ else msg
+           , info = info)
+#  # collapse the value string in case multiple messages were caught.
+#  value <- paste(value, collapse="\n")
+#  call <- sys.call(sys.parent(1))
+#  # we got a warning or error instead of a message:
+#  if (!result){
+#    tinytest(
+#        result
+#      , call
+#      , diff  = msg
+#      , short = "xcpt" 
+#      , info  = info
+#    ) 
+#  # we got a message, check if it matches 'pattern'
+#  } else if (!isTRUE(grepl(pattern, value)) ){
+#    df <- if (value == "") "No message"
+#          else sprintf("The message\n '%s'\n doen not match pattern '%s'",value,pattern)
+#    tinytest(FALSE
+#      , call
+#      , diff = df
+#      , short = "xcpt"
+#      , info  = info
+#    )
+#  } else {
+#    tinytest(TRUE, call, info=info)
+#  }
+#  
 }
+
+#' @rdname expect_equal
+#'
+#' @details
+#'
+#' \code{expect_stdout} Expects that output is written to \code{stdout},
+#' for example using \code{cat} or \code{print}. Use \code{pattern} to
+#' specify a regular expression matching the output.
+#'
+#'
+#' @export
+expect_stdout <- function(current, pattern=".*", info=NA_character_){
+  value <- ""
+  msg <- NA_character_
+  
+  tc <- textConnection("value", open="w", local=TRUE)
+  sink(file=tc, type="output", split=FALSE)
+    tryCatch(current
+      , error=function(e){sink(file=NULL, type="output"); stop(e)}
+    )
+  sink(file = NULL, type="output")
+  close(tc)
+
+  result <- grepl(pattern, paste0(value,""))
+  if (!result)
+    msg <- sprintf("output '%s'\n does not match pattern '%s'", value, pattern)
+
+  tinytest(result, call = sys.call(sys.parent(1))
+           , short= if(result) NA_character_ else "xcpt"
+           , diff = msg
+           , info = info)
+}
+
+
+#' Compare object with object stored in a file
+#'
+#' Compares the current value with a value stored to file with
+#' \code{\link{saveRDS}}.  If the  file does not exist, the current value is
+#' stored into file, and the test returns \code{expect_null(NULL)}.
+#'
+#' @param current \code{[R object or expression]} Outcome or expression under 
+#'        scrutiny.
+#' @param file \code{[character]} File where the \code{target} is stored. If 
+#'        \code{file} does not exist, \code{current} will be stored there.
+#' @param ... passed to \code{\link{expect_equal}}, respectively \code{\link{expect_equivalent}}.
+#'
+#' @note
+#' Be aware that on CRAN it is not allowed to write data to user space. So make
+#' sure that the file is either stored with your tests, or generated with
+#' \code{\link{tempfile}}, or the test is skipped on CRAN, using
+#' \code{\link{at_home}}.
+#' 
+#' Also note that \code{\link{build_install_test}} clones the package and
+#' builds and tests it in a separate R session in the background. This means
+#' that if you create a file located at \code{tempfile()} during the run, this
+#' file is destroyed when the separate R session is closed.
+#'
+#'
+#' @family test-functions
+#'
+#'
+#' @examples
+#' filename <- tempfile()
+#' # this gives TRUE: the file does not exist, but is created now.
+#' expect_equal_to_reference(1, file=filename)
+#' # this gives TRUE: the file now exists, and its contents is equal
+#' # to the current value
+#' expect_equal_to_reference(1, file=filename)
+#' # this gives FALSE: the file exists, but is contents is not equal
+#' # to the current value
+#' expect_equal_to_reference(2, file=filename)
+#'
+#' @export
+expect_equal_to_reference <- function(current, file, ...){
+  eetr(current=current, file=file, type="equal", ...)
+}
+
+#' @rdname expect_equal_to_reference
+#' @export
+expect_equivalent_to_reference <- function(current, file, ...){
+  eetr(current=current, file=file, type="equivalent", ...)
+}
+
+eetr <- function (current, file, type=c("equal","equivalent"), ...){
+
+    if (file.exists(file)){
+        out <- if (type=="equal")
+                  tinytest::expect_equal(current, readRDS(file), ...)
+                else
+                  tinytest::expect_equivalent(current, readRDS(file), ...)
+        if (!out){
+           diff <- attr(out, "diff")
+           diff <- paste(
+                    sprintf("current does not match target read from %s\n", file)
+                    , diff)
+           attr(out,"diff") <- diff
+        }
+        out
+    } else {
+        tinytest::expect_null(saveRDS(current, file)
+                , info=sprintf("Stored value in %s", file))
+    }
+}
+
 
 
 #' Report side effects for expressions in test files
@@ -538,7 +672,7 @@ expect_message <- function(current, pattern=".*", info=NA_character_){
 #' report_side_effects(FALSE)
 #'
 #' # only report changes in environment variables
-#' report_side_effects(pwd=FALSE)
+#' report_side_effects(report=FALSE, envvar=TRUE)
 #'
 #' @export
 report_side_effects <- function(report=TRUE, envvar=report, pwd=report, files=report){

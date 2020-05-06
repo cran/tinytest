@@ -4,8 +4,12 @@
 \alias{report_side_effects}
 \title{Report side effects for expressions in test files}
 \usage{
-report_side_effects(report = TRUE, envvar = report, pwd = report,
-  files = report)
+report_side_effects(
+  report = TRUE,
+  envvar = report,
+  pwd = report,
+  files = report
+)
 }
 \arguments{
 \item{report}{\code{[logical]} report all side-effects}
@@ -52,7 +56,7 @@ report_side_effects()
 report_side_effects(FALSE)
 
 # only report changes in environment variables
-report_side_effects(pwd=FALSE)
+report_side_effects(report=FALSE, envvar=TRUE)
 
 }
 \concept{sidefx}

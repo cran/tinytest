@@ -33,6 +33,16 @@ expect_false(ignore(expect_equivalent)(2,c(x=3)))
 expect_true(ignore(expect_null)(NULL))
 expect_false(ignore(expect_null)(1))
 
+fl <- tempfile()
+expect_true(ignore(expect_equal_to_reference)(1, file=fl))
+expect_true(ignore(expect_equal_to_reference)(1, file=fl))
+expect_false(ignore(expect_equal_to_reference)(2, file=fl))
+
+xx <- c(fu=1)
+expect_true(ignore(expect_equivalent_to_reference)(xx, file=fl))
+expect_false(ignore(expect_equal_to_reference)(xx, file=fl))
+
+
 
 
 # reading from file
@@ -43,6 +53,24 @@ expect_equal(women, dat)
 # check behavior
 expect_warning(warning("foo"))
 expect_error(stop("bar"))
+
+# class of error condition
+ec <- errorCondition(message="wa babalooba", class="foo")
+expect_false(ignore(expect_error)( stop(ec), class="bar" ))
+expect_true (ignore(expect_error)( stop(ec), class="foo" ))
+
+# class of warning condition
+wc <- warningCondition(message="ba la bamboo", class="foo")
+expect_false(ignore(expect_warning)( warning(wc), class="bar"))
+expect_true (ignore(expect_warning)( warning(wc), class="foo"))
+
+# messages to stdout
+expect_stdout(print("hihi"))
+expect_stdout(cat("hihi"))
+expect_stdout(cat("hoho"), pattern="ho")
+expect_false(ignore(expect_stdout)(cat("hihi"),pattern="ho"))
+
+
 
 expect_true(ignore(expect_error)(stop("foo")))
 expect_false(ignore(expect_error)(stop("foo"),pattern="bar"))
@@ -58,6 +86,12 @@ expect_false(ignore(expect_message)(message("hihi"),"lol"))
 expect_false(ignore(expect_message)(stop("hihi"),"lol"))
 expect_false(ignore(expect_message)(warning("hihi"),"lol"))
 expect_message(message("hihi, I lol"),"lol")
+
+
+expect_stdout(print("hihi"),pattern="hi")
+expect_stdout(cat("hihi"),pattern="hi")
+expect_false(ignore(expect_stdout)(print("hihi"),pattern="ho"))
+
 
 # check that info fields are filled.
 msg <- "whoO0Oop"
@@ -85,5 +119,10 @@ L <- list(
 )
 
 for ( x in L ) expect_equal(attr(x,"info"), msg)
+
+
+
+
+
 
 

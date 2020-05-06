@@ -2,6 +2,46 @@
 #' @importFrom parallel makeCluster parLapply stopCluster
 {}
 
+# directory from which run_test_file() was called (i.e. before it temporarily
+# changes directory
+
+call_wd <- (function(){
+  CALLDIR <- ""
+  function(dir=NULL){
+    if (is.null(dir)){
+      return(CALLDIR)
+    } else {
+      # only set when not set previously
+      if (CALLDIR == "" || dir == "") CALLDIR <<- dir
+    }
+    CALLDIR
+  }
+})()
+
+
+set_call_wd <- function(dir){
+  call_wd(dir)
+}
+
+#' Get workding dir from where a test was initiated
+#'
+#' A test runner, like \code{\link{run_test_file}} changes
+#' R's working directory to the location of the test file temporarily 
+#' while the tests run. This function can be used from within the
+#' test file to get R's working directory at the time \code{run_test_file} 
+#' (or one of it's siblings)
+#' was called.
+#'
+#'
+#' @return \code{[character]} A path.
+#' @examples
+#' get_call_wd()
+#' @export
+get_call_wd <- function(){
+  call_wd()
+}
+
+
 
 # reference object to store or ignore output
 # of 'expect' functions
@@ -225,8 +265,11 @@ add_locally_masked_functions <- function(envir, output){
   envir$expect_message      <- capture(expect_message, output)
   envir$expect_warning      <- capture(expect_warning, output)
   envir$expect_error        <- capture(expect_error, output)
+  envir$expect_stdout       <- capture(expect_stdout, output)
   envir$expect_identical    <- capture(expect_identical, output)
   envir$expect_silent       <- capture(expect_silent, output)
+  envir$expect_equal_to_reference      <- capture(expect_equal_to_reference, output)
+  envir$expect_equivalent_to_reference <- capture(expect_equivalent_to_reference, output)
   envir$exit_file           <- capture_exit(exit_file, output)
   envir$ignore              <- ignore
   envir$at_home             <- tinytest::at_home
@@ -319,24 +362,26 @@ capture_using <- function(fun, envir, output){
 #'
 #' @section The tinytest API:
 #'
-#' Packages can extend \pkg{tinytest} with expectation functions \emph{if and only}
-#' if the following requirements are satisfied.
+#' Packages can extend \pkg{tinytest} with expectation functions \emph{if and only
+#' if} the following requirements are satisfied.
 #'
 #' \enumerate{
 #'  \item{The extending functions return a \code{\link{tinytest}} object.  This 
-#'        can be created by calling \code{tinytest()} with the arguments
+#'        can be created by calling \code{tinytest()} with the arguments (defaults,
+#'        if any, are in brackets):
 #'    \itemize{
 #'      \item{\code{result}: A \code{logical} scalar: \code{TRUE} or \code{FALSE} (not
 #'            \code{NA}) }
 #'      \item{\code{call}: The \code{call} to the expectation function. Usually the 
 #'            result of \code{sys.call(sys.parent(1))} }
-#'      \item{\code{diff}: A \code{character} scalar, with a long description of the 
+#'      \item{\code{diff} (\code{NA_character_}): A \code{character} scalar, with a long description of the 
 #'            difference. Sentences may be separated by \code{"\\n"}.}
-#'      \item{\code{short}: Either \code{"data"}, if the difference is in the 
+#'      \item{\code{short} (\code{NA_character_}): Either \code{"data"}, if the difference is in the 
 #'            data. \code{"attr"} when attributes differ or \code{"xcpt"} when 
 #'            an expectation about an exception is not met. If there are 
 #'            differences in data and in attributes, the attributes take 
 #'            precedence.}
+#'      \item{\code{info}} (\code{NA_character_}): A user-defined message.
 #'    }
 #'    Observe that this requires the extending package to add \pkg{tinytest} to 
 #'    the \code{Imports} field in the package's \code{DESCRIPTION} file (this 
@@ -352,6 +397,8 @@ capture_using <- function(fun, envir, output){
 #'         functions start with \code{expect_}.}
 #'   \item{Explain to users of the extension package how to use the extension 
 #'         (see \code{\link{using}}).}
+#'   \item{include an \code{info} argument to \code{expect_} functions that 
+#'    is passed to \code{tinytest()}}.
 #' }
 #'
 #'
@@ -384,12 +431,15 @@ register_tinytest_extension <- function(pkg, functions){
 #' @param file \code{[character]} File location of a .R file.
 #' @param at_home \code{[logical]} toggle local tests.
 #' @param verbose \code{[integer]} verbosity level. 0: be quiet, 1: print
-#'   status per file, 2: print status per test expression.
+#'   status per file, 2: print status and increase counter after each test expression.
 #' @param color \code{[logical]} toggle colorize counts in verbose mode (see Note)
 #' @param remove_side_effects \code{[logical]} toggle remove user-defined side
 #'   effects? See section on side effects.
 #' @param side_effects \code{[logical|list]} Either a logical,
 #' or a list of arguments to pass to \code{\link{report_side_effects}}.
+#' @param set_env \code{[named list]}. Key=value pairs of environment variables
+#' that will be set before the test file is run and reset afterwards. These are not
+#' counted as side effects of the code under scrutiny.
 #' @param ... Currently unused
 #' 
 #' @details
@@ -402,7 +452,7 @@ register_tinytest_extension <- function(pkg, functions){
 #' The graphics device is set to \code{pdf(file=tempfile())} for the run of the
 #' test file.
 #'
-#' @section User-defined side effects:
+#' @section Side-effects caused by test code:
 #' 
 #' All calls to \code{\link[base]{Sys.setenv}} and \code{\link[base]{options}}
 #' defined in a test file are captured and undone once the test file has run,
@@ -410,23 +460,22 @@ register_tinytest_extension <- function(pkg, functions){
 #' 
 #' @section Tracking side effects:
 #'
-#' Certain side effects can be tracked, even when they are not explicitly evoked
-#' in the test file. See \code{\link{report_side_effects}} for side effects tracked
-#' by \pkg{tinytest}.
-#' Calls to \code{report_side_effects} within the test file overrule
-#' settings provided with this function.
+#' Certain side effects can be tracked, even when they are not explicitly
+#' evoked in the test file. See \code{\link{report_side_effects}} for side
+#' effects tracked by \pkg{tinytest}.  Calls to \code{report_side_effects}
+#' within the test file overrule settings provided with this function.
 #'
 #' 
 #'
 #' @note
 #' Not all terminals support ansi escape characters, so colorized output can be
-#' switched off. This can also be done globally by setting \code{options(tt.pr.color=FALSE)}.
-#' Some terminals that do support ansi escape characters may contain
-#' bugs. An example is the RStudio terminal (RStudio 1.1) running on Ubuntu 16.04
-#' (and possibly other OSs).
+#' switched off. This can also be done globally by setting
+#' \code{options(tt.pr.color=FALSE)}.  Some terminals that do support ansi
+#' escape characters may contain bugs. An example is the RStudio terminal
+#' (RStudio 1.1) running on Ubuntu 16.04 (and possibly other OSs).
 #'
-#' @return   A \code{list} of class \code{tinytests}, which is a list
-#'    of \code{\link{tinytest}} objects.
+#' @return A \code{list} of class \code{tinytests}, which is a list of
+#' \code{\link{tinytest}} objects.
 #'
 #' @examples
 #' # create a test file, in temp directory
@@ -465,15 +514,22 @@ run_test_file <- function( file
                          , color   = getOption("tt.pr.color", TRUE)
                          , remove_side_effects = TRUE 
                          , side_effects = FALSE
+                         , set_env = list()
                          , ...){
 
   if (!file_test("-f", file)){
     stop(sprintf("'%s' does not exist or is a directory",file),call.=FALSE)
   }
-
+  # set environment variables (if any) to control the R environment during testing.
+  if (length(set_env) > 0){
+    # first, record current settings
+    old_env_var <- sapply(names(set_env), Sys.getenv, USE.NAMES=TRUE)
+    # new settings
+    do.call(Sys.setenv, set_env)
+  }
   ## where to come back after running the file
   oldwd <- getwd()
-
+  set_call_wd(oldwd)
 
 
   # make sure that plots get redirected to oblivion
@@ -492,6 +548,7 @@ run_test_file <- function( file
       ## Clean up tinytest side effects
       # go back to the original working directory
       setwd(oldwd)
+      set_call_wd("")
       # unset 'at_home' marker
       Sys.unsetenv("TT_AT_HOME")
       if ( remove_side_effects ){ ## Clean up user side effects
@@ -501,6 +558,8 @@ run_test_file <- function( file
         reset_options(oldop)
       }
       grDevices::dev.off()
+      # return env var to values before running run_test_file
+      sapply(names(set_env), function(x) Sys.setenv(x = old_env_var[x]))
   })
 
 
@@ -623,11 +682,11 @@ print_status <- function(filename, env, color){
 #' determines how alphabets are sorted).  For this reason it is a good idea to
 #' create test files that run independent of each other so their order of
 #' execution does not matter. In tinytest, test files cannot share variables.
-#' The default behavior of test runners furher discourages interdependence by
+#' The default behavior of test runners further discourages interdependence by
 #' resetting environment variables and options that are set in a test file
 #' after the file is executed. If an environment variable needs to survive a
 #' single file, use \code{base::Sys.setenv()} explicitly.  Similarly, if an
-#' option setting needs to survive, use \code{base::options}
+#' option setting needs to survive, use \code{base::options()}
 #'
 #' @section Parallel tests:
 #'
@@ -683,7 +742,8 @@ run_test_dir <- function(dir="inst/tinytest", pattern="^test.*\\.[rR]$"
   if ( !inherits(cluster, "cluster") ){
     # set pwd here, to save time in run_test_file.
     oldwd <- getwd()
-    on.exit(setwd(oldwd))
+    set_call_wd(oldwd)
+    on.exit({setwd(oldwd); set_call_wd("")})
     setwd(dir)  
     test_output <- lapply(basename(testfiles), run_test_file
                            , at_home = at_home
@@ -826,13 +886,12 @@ test_package <- function(pkgname, testdir = "tinytest"
 
   out <- run_test_dir(testdir, at_home=at_home, cluster=cluster,...) 
   i_fail <- sapply(out, isFALSE)
-  if ( any(i_fail) ){
+  if ( any(i_fail) && !interactive() ){
     msg <- paste( sapply(out[i_fail], format.tinytest, type="long"), collapse="\n")
     msg <- paste(msg, "\n")
-    if (!interactive()) stop(msg, call.=FALSE)
-  } else {
-    out
-  }
+    stop(msg, call.=FALSE)
+  } 
+  out
 }
 
 

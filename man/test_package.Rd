@@ -4,8 +4,7 @@
 \alias{test_package}
 \title{Test a package during R CMD check or after installation}
 \usage{
-test_package(pkgname, testdir = "tinytest", at_home = FALSE,
-  ncpu = NULL, ...)
+test_package(pkgname, testdir = "tinytest", at_home = FALSE, ncpu = NULL, ...)
 }
 \arguments{
 \item{pkgname}{\code{[character]} scalar. Name of the package}
@@ -49,9 +48,11 @@ the package structure.
 \seealso{
 \code{\link{setup_tinytest}}
 
-Other test-files: \code{\link{build_install_test}},
-  \code{\link{exit_file}}, \code{\link{run_test_dir}},
-  \code{\link{run_test_file}},
-  \code{\link{summary.tinytests}}
+Other test-files: 
+\code{\link{build_install_test}()},
+\code{\link{exit_file}()},
+\code{\link{run_test_dir}()},
+\code{\link{run_test_file}()},
+\code{\link{summary.tinytests}()}
 }
 \concept{test-files}

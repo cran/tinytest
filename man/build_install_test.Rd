@@ -4,10 +4,16 @@
 \alias{build_install_test}
 \title{build, install and test}
 \usage{
-build_install_test(pkgdir = "./", testdir = "tinytest",
-  at_home = TRUE, verbose = getOption("tt.verbose", 2), ncpu = 1,
-  remove_side_effects = TRUE, side_effects = FALSE,
-  keep_tempdir = FALSE)
+build_install_test(
+  pkgdir = "./",
+  testdir = "tinytest",
+  at_home = TRUE,
+  verbose = getOption("tt.verbose", 2),
+  ncpu = 1,
+  remove_side_effects = TRUE,
+  side_effects = FALSE,
+  keep_tempdir = FALSE
+)
 }
 \arguments{
 \item{pkgdir}{\code{[character]} Package directory}
@@ -51,9 +57,11 @@ necessary.
 }
 }
 \seealso{
-Other test-files: \code{\link{exit_file}},
-  \code{\link{run_test_dir}}, \code{\link{run_test_file}},
-  \code{\link{summary.tinytests}},
-  \code{\link{test_package}}
+Other test-files: 
+\code{\link{exit_file}()},
+\code{\link{run_test_dir}()},
+\code{\link{run_test_file}()},
+\code{\link{summary.tinytests}()},
+\code{\link{test_package}()}
 }
 \concept{test-files}

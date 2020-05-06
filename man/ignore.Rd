@@ -40,6 +40,8 @@ is exactly the same as that for \code{expect_true(1==1)}.
 
 }
 \seealso{
-Other test-functions: \code{\link{expect_equal}}
+Other test-functions: 
+\code{\link{expect_equal_to_reference}()},
+\code{\link{expect_equal}()}
 }
 \concept{test-functions}
