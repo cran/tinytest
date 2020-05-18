@@ -428,104 +428,161 @@ expect_error <- function(current, pattern=".*", class="error", info=NA_character
            , info = info)
 }
 
+
+# helper: format 1st three elements of a list of condition objects
+first_n <- function(L, n=3){
+  i      <- seq_len(min(length(L),n))
+
+
+
+  msgcls <- sapply(L[i], function(m) paste(class(m), collapse=", "))
+   
+  maintype <- sapply(L[i], function(m){
+    if      ( inherits(m, "message") ) "Message"
+    else if ( inherits(m, "warning") ) "Warning"
+    else if ( inherits(m, "error")   ) "Error"
+    else "Condition"
+  }) 
+
+
+   msgtxt <- sub("\\n$","", sapply(L[i], function(m) m$message))
+   
+   out   <- sprintf("%s %d of class <%s>:\n  '%s'",maintype, i, msgcls, msgtxt)
+   paste(out, collapse="\n")
+}
+
+
+
 #' @rdname expect_equal
 #' @export
 expect_warning <- function(current, pattern=".*", class="warning", info=NA_character_){
-  
-  result <- FALSE
-  diff <- "No warning"
+ 
+  messages <- list()
+  warnings <- list()  
+  errors   <- list()
 
-  withCallingHandlers(current
-    , warning = function(w){
-        matches <- grepl(pattern, w$message)
-        isclass <- inherits(w, class)
-
-        if ( matches && isclass ){
-          result <<- TRUE
-        } else if ( !isclass ){
-          diff <<- sprintf("Warning of class '%s', does not inherit from '%s'"
-                          , paste(class(w), collapse=", "), class)
-        } else if (!matches){
-          diff <<- sprintf("The warning message\n '%s'\n does not match pattern '%s'"
-                          , w$message, pattern)
+  tryCatch(withCallingHandlers(current
+      , warning = function(w){ 
+          warnings <<- append(warnings, list(w))
+          invokeRestart("muffleWarning")
         }
-        invokeRestart("muffleWarning")
-      }
+      , message = function(m) {
+          messages <<- append(messages, list(m))
+          invokeRestart("muffleMessage")
+        }
+      )
+    , error  = function(e) errors <<- append(errors, list(e))
   )
 
+  nmsg <- length(messages)
+  nwrn <- length(warnings)
+  nerr <- length(errors)
+ 
+ 
+  results <- sapply(warnings, function(w) {
+    inherits(w, class) && grepl(pattern, w$message)
+  })
+
+  if (any(results)){ ## happy flow
+    result <- TRUE
+    short  <- diff <- NA_character_
+  } else { ## construct diff  message
+    result <- FALSE
+    short  <- "xcpt"
+    diff   <- if ( nwrn == 0 ){
+      "No warning was emitted"
+    } else {
+      n_right_class <- sum(sapply(warnings, function(w) inherits(w, class)))
+      if (n_right_class == 0){
+        head <- sprintf("Found %d warning(s), but not of class '%s'.", nwrn, class)
+        head <- paste(head, "Showing up to three warnings:\n")
+        body <- first_n(warnings)
+        paste(head, body)
+      } else {
+        wrns <- Filter(function(w) inherits(w,class), warnings)
+        head <- sprintf("Found %d warnings(s) of class '%s', but not matching '%s'."
+                      , nwrn, class, pattern)
+        head <- paste(head,"\nShowing up to three warnings:\n")
+        body <- first_n(wrns)
+        paste(head, body) 
+      }
+    }
+  }
+
+  if (!result && (nmsg > 0 || nerr > 0)) 
+    diff <- paste0(diff,sprintf("\nAlso found %d message(s) and %d error(s)"
+              , nmsg, nerr))
+
   tinytest(result, call=sys.call(sys.parent(1))
-           , short = if (result) NA_character_ else "xcpt"
-           , diff  = if (result) NA_character_ else diff
-           , info  = info)
+          , short=short, diff=diff, info=info)
+
 }
 
 
 #' @rdname expect_equal
 #' @export
 expect_message <- function(current, pattern=".*", class="message", info=NA_character_){
-#  value <- ""
-#  tc <- textConnection("value", open="w", local=TRUE)
-#  sink(file=tc,type="message", split=FALSE)
-  
+ 
+  messages <- list()
+  warnings <- list()  
+  errors   <- list()
 
-  result <- FALSE
-  msg    <- ""
-  tryCatch(current
-    , error = function(e){
-        msg <<- sprintf("Expected message, got error:\n '%s'",e$message)
-      }
-    , warning = function(w){
-        msg <<- paste(sprintf("Expected message, got warning:\n '%s'", w$message)
-                    , collapse="\n")
-      }
-    , message = function(m){
-        matches <- grepl(pattern, m$message)
-        isclass <- inherits(m, class)
-        if (matches && isclass){
-          result <<- TRUE
-        } else if (!isclass){
-          result <<- FALSE
-          msg <<- sprintf("Message of class '%s', does not inherit from '%s'"
-                          , paste(class(m), collapse=", "), class)
-        } else if (!matches){
-          msg <<- sprintf("The message message\n '%s'\n does not match pattern '%s'"
-                          , m$message, pattern)
+  tryCatch(withCallingHandlers(current
+      , warning = function(w){ 
+          warnings <<- append(warnings, list(w))
+          invokeRestart("muffleWarning")
         }
-      }
+      , message = function(m) {
+          messages <<- append(messages, list(m))
+          invokeRestart("muffleMessage")
+        }
+      )
+    , error  = function(e) errors <<- append(errors, list(e))
   )
-#  sink(file = NULL, type="message")
-#  close(tc)
-  
-  tinytest(result, call = sys.call(sys.parent(1))
-           , short= if(result) NA_character_ else "xcpt"
-           , diff = if(result) NA_character_ else msg
-           , info = info)
-#  # collapse the value string in case multiple messages were caught.
-#  value <- paste(value, collapse="\n")
-#  call <- sys.call(sys.parent(1))
-#  # we got a warning or error instead of a message:
-#  if (!result){
-#    tinytest(
-#        result
-#      , call
-#      , diff  = msg
-#      , short = "xcpt" 
-#      , info  = info
-#    ) 
-#  # we got a message, check if it matches 'pattern'
-#  } else if (!isTRUE(grepl(pattern, value)) ){
-#    df <- if (value == "") "No message"
-#          else sprintf("The message\n '%s'\n doen not match pattern '%s'",value,pattern)
-#    tinytest(FALSE
-#      , call
-#      , diff = df
-#      , short = "xcpt"
-#      , info  = info
-#    )
-#  } else {
-#    tinytest(TRUE, call, info=info)
-#  }
-#  
+
+  nmsg <- length(messages)
+  nwrn <- length(warnings)
+  nerr <- length(errors)
+ 
+ 
+  results <- sapply(messages, function(m) {
+    inherits(m, class) && grepl(pattern, m$message)
+  })
+
+  if (any(results)){ ## happy flow
+    result <- TRUE
+    short <- diff <- NA_character_
+  } else { ## construct diff  message
+    result <- FALSE
+    short <- "xcpt"
+    diff <- if (length(messages) == 0){
+      "No message was emitted"
+    } else {
+      n_right_class <- sum(sapply(messages, function(m) inherits(m, class)))
+      if (n_right_class == 0){
+        head <- sprintf("Found %d message(s), but not of class '%s'.", nmsg, class)
+        head <- paste(head, "Showing up to three messages:\n")
+        body <- first_n(messages)
+        paste(head, body)
+      } else {
+        msgs <- Filter(function(m) inherits(m,class), messages)
+        head <- sprintf("Found %d message(s) of class '%s', but not matching '%s'."
+                      , nmsg, class, pattern)
+        head <- paste(head,"\nShowing up to three messages:\n")
+        body <- first_n(msgs)
+        paste(head, body) 
+      }
+    }
+  }
+
+  if (!result && (nwrn > 0 || nerr > 0)) 
+    diff <- paste0(diff,sprintf("\nAlso found %d warning(s) and %d error(s)"
+              , nwrn, nerr))
+
+  tinytest(result, call=sys.call(sys.parent(1))
+          , short=short, diff=diff, info=info)
+
+
 }
 
 #' @rdname expect_equal

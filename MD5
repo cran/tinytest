@@ -1,7 +1,7 @@
-b3b31076d822b7ca2526e8d95d2c78f1 *DESCRIPTION
+f20a6bacf9a59f1add5c6454576994b3 *DESCRIPTION
 c2623b07791f78aee1cd32dd1bc66aab *NAMESPACE
-229c097981ba32ed3edd205f1ab02885 *NEWS
-5ce73b9178bf2a93e34094d23390490e *R/expectations.R
+ebcb44ee51480174b6ae8958138b426e *NEWS
+c7448ef0eaac21a0b0a9acdfa78bfbf3 *R/expectations.R
 50e7d02026bee5ac8906b17c7deda44d *R/init.R
 94810950d25a672165a99b970ee2b6bd *R/methods.R
 8021b11aa26ca42b3059c28f1718d99c *R/setup.R
@@ -12,10 +12,10 @@ b516f46b55a3fd486ce9632c9699da29 *build/vignette.rds
 4336e67b1348964ee4da8c198edf3cf9 *inst/CITATION
 c81f16a47de2fd228b008c5ed2a04e5b *inst/doc/tinytest_examples.R
 c5a1c4d17a7e97813e46c3b3e38e0f1c *inst/doc/tinytest_examples.Rnw
-1e30ee89625c0b3595a2ac5e4ba3e5a0 *inst/doc/tinytest_examples.pdf
+b35d135f52d06c21d5dd375d72b81da4 *inst/doc/tinytest_examples.pdf
 4369a32a0007e1b9ca18596c0a9e5665 *inst/doc/using_tinytest.R
 e2b2956d4e7bfd1a94b02e3c52ce8233 *inst/doc/using_tinytest.Rnw
-ef34902ddd9593c76424a31b7b222a5d *inst/doc/using_tinytest.pdf
+5f1a3849d28240a27b0a260246bd830a *inst/doc/using_tinytest.pdf
 804b7fef290add675b038cbfc14c71b8 *inst/tinytest/programming.R
 abcdbcac0c19d4ef571b1957f218d53b *inst/tinytest/runs/test_cwd.R
 0fa0632726cbcf95aa903bb51c897299 *inst/tinytest/runs/test_cwd2.R
@@ -31,8 +31,9 @@ e14c9bba1c2170a53d1af27913545bb2 *inst/tinytest/test_call_wd.R
 6d410b16a422d267ab483e5201caf59f *inst/tinytest/test_file.R
 f0e0979f3190f1d20507af7625c69dc0 *inst/tinytest/test_gh_issue_17.R
 f6a223d1b1d4892ffb11411d40bf7f0c *inst/tinytest/test_gh_issue_32.R
+8a23aac6ae943a6a4cd6d6e3e37a2462 *inst/tinytest/test_gh_issue_51.R
 b2050f6a8a6c1c222abd5b0878263084 *inst/tinytest/test_init.R
-150e8f6b2869dff58409835665ee31b3 *inst/tinytest/test_tiny.R
+b7fe9add6c8a1c285b4563defca3740f *inst/tinytest/test_tiny.R
 a909aa6993cd8a1b12438d59b0847e8e *inst/tinytest/test_utils.R
 3d582c8039e89e68e63786c986ac065f *inst/tinytest/women.csv
 1f168031ef73faa1f161eb17ff126eb8 *man/at_home.Rd
