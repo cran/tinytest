@@ -7,14 +7,14 @@
 test_package(pkgname, testdir = "tinytest", at_home = FALSE, ncpu = NULL, ...)
 }
 \arguments{
-\item{pkgname}{\code{[character]} scalar. Name of the package}
+\item{pkgname}{\code{[character]} scalar. Name of the package, as in the \code{DESCRIPTION} file.}
 
 \item{testdir}{\code{[character]} scalar. Path to installed directory, relative
 to the working directory of \code{R CMD check}.}
 
 \item{at_home}{\code{[logical]} scalar. Are we at home? (see Details)}
 
-\item{ncpu}{A positive integer, or a \code{\link[parallel]{makeCluster}} object.}
+\item{ncpu}{A positive integer, or a \code{\link{makeCluster}} object.}
 
 \item{...}{extra arguments passed to \code{\link{run_test_dir}} (e.g. \code{ncpu}).}
 }

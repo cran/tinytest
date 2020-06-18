@@ -7,11 +7,13 @@
 build_install_test(
   pkgdir = "./",
   testdir = "tinytest",
+  pattern = "test_.+[rR]$",
   at_home = TRUE,
   verbose = getOption("tt.verbose", 2),
   ncpu = 1,
   remove_side_effects = TRUE,
   side_effects = FALSE,
+  lc_collate = getOption("tt.collate", NA),
   keep_tempdir = FALSE
 )
 }
@@ -20,6 +22,10 @@ build_install_test(
 
 \item{testdir}{\code{[character]} Name of directory under \code{pkgdir/inst}
 containing test files.}
+
+\item{pattern}{\code{[character]} A regular expression that is used to find
+scripts in \code{dir} containing tests (by default \code{.R} or \code{.r}
+files starting with \code{test}).}
 
 \item{at_home}{\code{[logical]} toggle local tests.}
 
@@ -32,6 +38,11 @@ effects? See section on side effects.}
 
 \item{side_effects}{\code{[logical|list]} Either a logical,
 or a list of arguments to pass to \code{\link{report_side_effects}}.}
+
+\item{lc_collate}{\code{[character]} Locale setting used to sort the
+test files into the order of execution. The default \code{NA} ensures
+current locale is used. Set this e.g. to \code{"C"} to ensure bytewise
+and more platform-independent sorting (see details in \code{\link{run_test_dir}}.}
 
 \item{keep_tempdir}{\code{[logical]} keep directory where the pkg is
 installed and where tests are run? If \code{TRUE}, the directory is not

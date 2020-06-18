@@ -9,7 +9,7 @@ using(package, quietly = TRUE)
 \arguments{
 \item{package}{the name of the extension package, given as name or character string.}
 
-\item{quietly}{Passed to \code{\link[base]{require}}.}
+\item{quietly}{Passed to \code{\link{require}}.}
 }
 \value{
 A named \code{list}, with the package name and the names of the

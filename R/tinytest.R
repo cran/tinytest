@@ -292,7 +292,7 @@ add_locally_masked_functions <- function(envir, output){
 #'
 #' 
 #' @param package the name of the extension package, given as name or character string.
-#' @param quietly Passed to \code{\link[base]{require}}.
+#' @param quietly Passed to \code{\link{require}}.
 #'
 #' @return A named \code{list}, with the package name and the names of the
 #'   functions registered by \code{package} to extend \pkg{tinytest}. A message
@@ -454,7 +454,7 @@ register_tinytest_extension <- function(pkg, functions){
 #'
 #' @section Side-effects caused by test code:
 #' 
-#' All calls to \code{\link[base]{Sys.setenv}} and \code{\link[base]{options}}
+#' All calls to \code{\link{Sys.setenv}} and \code{\link{options}}
 #' defined in a test file are captured and undone once the test file has run,
 #' if \code{remove_side_effects} is set to \code{TRUE}.
 #' 
@@ -668,7 +668,7 @@ print_status <- function(filename, env, color){
 #' @param remove_side_effects \code{[logical]} toggle remove user-defined side 
 #'  effects. Environment variables (\code{Sys.setenv()}) and options (\code{options()})
 #'  defined in a test file are reset before running the next test file (see details).
-#' @param cluster A \code{\link[parallel]{makeCluster}} object. 
+#' @param cluster A \code{\link{makeCluster}} object. 
 #' @param lc_collate \code{[character]} Locale setting used to sort the
 #'  test files into the order of execution. The default \code{NA} ensures
 #'  current locale is used. Set this e.g. to \code{"C"} to ensure bytewise
@@ -720,8 +720,8 @@ print_status <- function(filename, env, color){
 #' dat <- as.data.frame(out)
 #'
 #' @family test-files
-#' @seealso \code{\link[parallel]{makeCluster}},
-#' \code{\link[parallel]{clusterEvalQ}}, \code{\link[parallel]{clusterExport}}
+#' @seealso \code{\link{makeCluster}},
+#' \code{\link{clusterEvalQ}}, \code{\link{clusterExport}}
 #'
 #' @export
 run_test_dir <- function(dir="inst/tinytest", pattern="^test.*\\.[rR]$"
@@ -833,11 +833,11 @@ at_home <- function(){
 #' used by \code{R CMD check} or by a user that installed a package that
 #' uses the \pkg{tinytest} test infrastructure.
 #'
-#' @param pkgname \code{[character]} scalar. Name of the package
+#' @param pkgname \code{[character]} scalar. Name of the package, as in the \code{DESCRIPTION} file.
 #' @param testdir \code{[character]} scalar. Path to installed directory, relative
 #' to the working directory of \code{R CMD check}.
 #' @param at_home \code{[logical]} scalar. Are we at home? (see Details)
-#' @param ncpu A positive integer, or a \code{\link[parallel]{makeCluster}} object.
+#' @param ncpu A positive integer, or a \code{\link{makeCluster}} object.
 #' @param ... extra arguments passed to \code{\link{run_test_dir}} (e.g. \code{ncpu}).
 #'
 #'
@@ -909,6 +909,9 @@ test_package <- function(pkgname, testdir = "tinytest"
 #' @param pkgdir \code{[character]} Package directory
 #' @param testdir \code{[character]} Name of directory under \code{pkgdir/inst}
 #'   containing test files.
+#' @param pattern \code{[character]} A regular expression that is used to find
+#'   scripts in \code{dir} containing tests (by default \code{.R} or \code{.r}
+#'   files starting with \code{test}).
 #' @param at_home \code{[logical]} toggle local tests.
 #' @param ncpu \code{[numeric]} number of CPUs to use during the testing phase.
 #' @param verbose \code{[logical]} toggle verbosity during execution
@@ -916,6 +919,10 @@ test_package <- function(pkgname, testdir = "tinytest"
 #'   effects? See section on side effects.
 #' @param side_effects \code{[logical|list]} Either a logical,
 #' or a list of arguments to pass to \code{\link{report_side_effects}}.
+#' @param lc_collate \code{[character]} Locale setting used to sort the
+#'  test files into the order of execution. The default \code{NA} ensures
+#'  current locale is used. Set this e.g. to \code{"C"} to ensure bytewise
+#'  and more platform-independent sorting (see details in \code{\link{run_test_dir}}.
 #' @param keep_tempdir \code{[logical]} keep directory where the pkg is
 #'   installed and where tests are run? If \code{TRUE}, the directory is not
 #'   deleted and it's location is printed.
@@ -931,11 +938,13 @@ test_package <- function(pkgname, testdir = "tinytest"
 #' @family test-files
 #' @export
 build_install_test <- function(pkgdir="./", testdir="tinytest"
+                             , pattern="test_.+[rR]$"
                              , at_home=TRUE
                              , verbose=getOption("tt.verbose",2)
                              , ncpu = 1
                              , remove_side_effects=TRUE
                              , side_effects=FALSE
+                             , lc_collate = getOption("tt.collate",NA)
                              , keep_tempdir=FALSE){
   oldwd <- getwd()
   tdir  <- tempfile()
@@ -950,6 +959,8 @@ build_install_test <- function(pkgdir="./", testdir="tinytest"
   pkg <- normalizePath(pkgdir, winslash="/")
 
   pkgname <- read.dcf(file.path(pkg, "DESCRIPTION"))[1]
+
+  pattern <- gsub("\\", "\\\\", pattern, fixed=TRUE)
 
   dir.create(tdir)
   setwd(tdir)
@@ -967,6 +978,7 @@ build_install_test <- function(pkgdir="./", testdir="tinytest"
   script <- "
 suppressPackageStartupMessages({
   pkgname <- '%s'
+  pattern <- '%s'
   tdir    <- '%s'
   testdir <- '%s'
   at_home <- %s
@@ -974,6 +986,7 @@ suppressPackageStartupMessages({
   remove_side_effects <- %s
   side_effects <- %s
   ncpu    <- %d
+  lc_collate <- %s
 
   #        pkgname       tdir
   library(pkgname, lib.loc=tdir,character.only=TRUE)
@@ -989,10 +1002,12 @@ if (ncpu > 1){
 #                                testdir       pkgname       tdir
 out <- run_test_dir(system.file(testdir, package=pkgname, lib.loc=tdir)
                    , at_home=at_home
+                   , pattern=pattern
                    , verbose=verbose
                    , remove_side_effects=remove_side_effects
                    , side_effects=side_effects
-                   , cluster=cluster)
+                   , cluster=cluster
+                   , lc_collate=lc_collate)
 
 saveRDS(out, file='output.RDS')
 
@@ -1000,13 +1015,15 @@ if (!is.null(cluster)) parallel::stopCluster(cluster)
 "
   scr <- sprintf(script
         , pkgname
+        , pattern
         , normalizePath(tdir, winslash="/", mustWork=FALSE)
         , testdir
         , at_home
         , verbose
         , remove_side_effects
         , side_effects
-        , ncpu)
+        , ncpu
+        , lc_collate)
 
   write(scr, file="test.R")
   system("Rscript test.R")

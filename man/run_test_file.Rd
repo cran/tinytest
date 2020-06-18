@@ -63,7 +63,7 @@ escape characters may contain bugs. An example is the RStudio terminal
 \section{Side-effects caused by test code}{
 
 
-All calls to \code{\link[base]{Sys.setenv}} and \code{\link[base]{options}}
+All calls to \code{\link{Sys.setenv}} and \code{\link{options}}
 defined in a test file are captured and undone once the test file has run,
 if \code{remove_side_effects} is set to \code{TRUE}.
 }

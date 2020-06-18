@@ -36,7 +36,7 @@ files starting with \code{test}).}
 effects. Environment variables (\code{Sys.setenv()}) and options (\code{options()})
 defined in a test file are reset before running the next test file (see details).}
 
-\item{cluster}{A \code{\link[parallel]{makeCluster}} object.}
+\item{cluster}{A \code{\link{makeCluster}} object.}
 
 \item{lc_collate}{\code{[character]} Locale setting used to sort the
 test files into the order of execution. The default \code{NA} ensures
@@ -108,8 +108,8 @@ dat <- as.data.frame(out)
 
 }
 \seealso{
-\code{\link[parallel]{makeCluster}},
-\code{\link[parallel]{clusterEvalQ}}, \code{\link[parallel]{clusterExport}}
+\code{\link{makeCluster}},
+\code{\link{clusterEvalQ}}, \code{\link{clusterExport}}
 
 Other test-files: 
 \code{\link{build_install_test}()},
