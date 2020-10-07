@@ -53,4 +53,11 @@ expect_false(exists("Rplots.pdf"))
 out <- run_test_file("runs/test_set_env.R", set_env=list("wa_babalooba"="ba_la_bamboo"))
 expect_true(all_pass(out))
 
+expect_message(run_test_file("runs/test_double_colon.R"))
+expect_message(tinytest:::check_double_colon("runs/test_double_colon.R"))
+
+# uncomment to see the warning with 'make test'
+# this also tests that commented lines are not counted.
+# tinytest:::expect_equal(2,5)
+
 

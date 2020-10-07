@@ -236,25 +236,37 @@ run_test_file("test_hehe.R", verbose=0, at_home=FALSE)
 
 
 ###################################################
-### code chunk number 35: using_tinytest.Rnw:657-658 (eval = FALSE)
+### code chunk number 35: using_tinytest.Rnw:667-674 (eval = FALSE)
+###################################################
+## require(dittodb)
+## with_mock_path(
+##     system.file("<path-to-your-mocks>", package = "myPackage"),
+##     with_mock_db({
+##     # <unit tests which rely on database connections>
+##     })
+## )
+
+
+###################################################
+### code chunk number 36: using_tinytest.Rnw:685-686 (eval = FALSE)
 ###################################################
 ## test_package("tinytest", set_env = list(WA_BABALOOBA="BA_LA_BAMBOO"))
 
 
 ###################################################
-### code chunk number 36: using_tinytest.Rnw:688-689 (eval = FALSE)
+### code chunk number 37: using_tinytest.Rnw:716-717 (eval = FALSE)
 ###################################################
 ## build_install_test("/path/to/your/package", ncpu=2)
 
 
 ###################################################
-### code chunk number 37: using_tinytest.Rnw:700-701 (eval = FALSE)
+### code chunk number 38: using_tinytest.Rnw:728-729 (eval = FALSE)
 ###################################################
 ## test_package("PACKAGENAME", ncpu=2)
 
 
 ###################################################
-### code chunk number 38: using_tinytest.Rnw:723-726 (eval = FALSE)
+### code chunk number 39: using_tinytest.Rnw:751-754 (eval = FALSE)
 ###################################################
 ## cl <- parallel::makeCluster(4, outfile="")
 ## parallel::clusterCall(cl, source, "R/myfunctions.R")
@@ -262,7 +274,7 @@ run_test_file("test_hehe.R", verbose=0, at_home=FALSE)
 
 
 ###################################################
-### code chunk number 39: using_tinytest.Rnw:733-736 (eval = FALSE)
+### code chunk number 40: using_tinytest.Rnw:761-764 (eval = FALSE)
 ###################################################
 ## parallel::clusterCall(cl, source, "R/myfunctions.R")
 ## test_all(cluster=cl)
@@ -270,7 +282,7 @@ run_test_file("test_hehe.R", verbose=0, at_home=FALSE)
 
 
 ###################################################
-### code chunk number 40: using_tinytest.Rnw:771-780
+### code chunk number 41: using_tinytest.Rnw:799-808
 ###################################################
 # exported, user-visible function
 inch2cm <- function(x){
@@ -284,7 +296,7 @@ conversion_factor <- function(unit){
 
 
 ###################################################
-### code chunk number 41: using_tinytest.Rnw:823-831
+### code chunk number 42: using_tinytest.Rnw:851-859
 ###################################################
 pound2kg <- function(x){
   stopifnot( is.numeric(x) )
@@ -297,7 +309,7 @@ pound2kg <- function(x){
 
 
 ###################################################
-### code chunk number 42: using_tinytest.Rnw:850-856 (eval = FALSE)
+### code chunk number 43: using_tinytest.Rnw:878-884 (eval = FALSE)
 ###################################################
 ##     expect_equal(pound2kg(1), 1/2.2046  )
 ##     # test for expected warning, store output
@@ -308,7 +320,7 @@ pound2kg <- function(x){
 
 
 ###################################################
-### code chunk number 43: using_tinytest.Rnw:901-907
+### code chunk number 44: using_tinytest.Rnw:929-935
 ###################################################
 bad_function <- function(file){
   oldwd <- getwd()
@@ -319,13 +331,7 @@ bad_function <- function(file){
 
 
 ###################################################
-### code chunk number 44: using_tinytest.Rnw:914-914
-###################################################
-
-
-
-###################################################
-### code chunk number 45: using_tinytest.Rnw:915-921
+### code chunk number 45: using_tinytest.Rnw:942-948
 ###################################################
 good_function <- function(file){
   oldwd <- getwd()
