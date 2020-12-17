@@ -88,17 +88,9 @@ output <- function(){
   e$file
   
   # will be set by exit_file()
-  e$exit <- FALSE
-  e$exitmsg <- ""
-  e$exit_msg <- function(print){
-    if(print){ 
-      plural <- e$lst != e$fst
-      if (plural) catf("\nExited '%s' at lines %d-%d. %s"
-                     , basename(e$file), e$fst, e$lst, e$exitmsg)
-      else catf("\nExited '%s' at line %d. %s"
-              , basename(e$file), e$fst, e$exitmsg)
-    }
-  }
+  e$exit     <- FALSE
+  e$exitmsg  <- ""
+  e$exit_msg <- function() sprintf("[Exited at #%d: %s]", e$fst, e$exitmsg)              
   
   e
 }
@@ -261,6 +253,7 @@ add_locally_masked_functions <- function(envir, output){
   envir$expect_equivalent   <- capture(expect_equivalent, output)
   envir$expect_true         <- capture(expect_true, output)
   envir$expect_false        <- capture(expect_false, output)
+  envir$expect_inherits     <- capture(expect_inherits, output)
   envir$expect_null         <- capture(expect_null, output)
   envir$expect_message      <- capture(expect_message, output)
   envir$expect_warning      <- capture(expect_warning, output)
@@ -520,6 +513,9 @@ run_test_file <- function( file
   if (!file_test("-f", file)){
     stop(sprintf("'%s' does not exist or is a directory",file),call.=FALSE)
   }
+
+  t0 <- Sys.time()
+
   # set environment variables (if any) to control the R environment during testing.
   if (length(set_env) > 0){
     # first, record current settings
@@ -619,23 +615,58 @@ run_test_file <- function( file
     o$fst  <- src[[i]][1]
     o$lst  <- src[[i]][3]
     o$call <- expr
-    if ( !o$exit ) eval(expr, envir=e)
-    else {
-      o$exit_msg(verbose >= 1)
-      break
-    }
+
+    if ( !o$exit ) eval(expr, envir=e) else break
+
     local_report_envvar(sidefx)
     local_report_cwd(sidefx)
     local_report_files(sidefx)
-    if (verbose == 2) print_status(prfile, o, color)
+    if (verbose == 2) print_status(prfile, o, color, print=TRUE)
   }
-  if (verbose == 1) print_status(prfile, o, color)
-  if (verbose >= 1) catf("\n")
- 
+  td <- abs(Sys.time() - t0)
+  tx <- humanize(td, color=color)
+  if (verbose == 1){ 
+    # always when run in parallel. And we can only print once in that case
+    str <- print_status(prfile, o, color, print=FALSE)
+    if (o$exit) catf("%s %s %s\n", str, tx, o$exit_msg())
+    else catf("%s %s\n", str, tx)
+  }
+  if (verbose >= 2){ 
+    str <- if (o$exit) catf("%s %s\n", tx, o$exit_msg())
+           else catf("%s\n", tx)
+  }
 
   # returns a 'list' of 'tinytest' objects
   test_output <- o$gimme()
-  structure(test_output, class="tinytests")
+  structure(test_output, class="tinytests", duration=td)
+}
+
+# readable output from a number of seconds.
+humanize <- function(x, color=TRUE){
+  x <- as.numeric(x)
+  # ms units
+  str <-  if (x < 0.1){ 
+            trimws(sprintf("%4.0fms",1000*x))
+          } else if (x < 60 ){ 
+            trimws(sprintf("%3.1fs",x)) 
+          } else if (x < 3600){
+            m <- x %/% 60
+            s <- x - m*60
+            trimws(sprintf("%2.0fm %3.1fs", m, s))
+          } else {
+            # fall-through: hours, minutes, seconds.
+            h <- x %/% 3600
+            m <- (x - 3600 * h)%/% 60
+            s <- x - 3600 * h - 60*m
+            sprintf("%dh %dm %3.1fs", h,m,s)
+          }
+  col <- if (x<0.1) "cyan" else "blue"
+  if (color) color_str(str, col) else str
+}
+
+color_str <- function(x, color){
+  cmap <- c(cyan=36, red=31, green=32, blue = 34)
+  sprintf("\033[0;%dm%s\033[0m", cmap[color], x)
 }
 
 
@@ -659,7 +690,7 @@ check_double_colon <- function(filename){
 
 }
 
-print_status <- function(filename, env, color){
+print_status <- function(filename, env, color, print=TRUE){
   prefix <- sprintf("\r%s %4d tests", filename, env$ntest())
   # print status after counter
   fails <- if ( env$ntest() == 0 ) "  " # print nothing if nothing was tested
@@ -669,7 +700,8 @@ print_status <- function(filename, env, color){
   side <- if (env$nside() == 0) ""
   else  sprintf(if (color) "\033[0;93m%d side-effects\033[0m" else "%d side-effects", env$nside())  
 
-  cat(prefix, fails, side, sep=" ")
+  if(print) cat(prefix, fails, side, sep=" ")
+  else paste(prefix, fails, side, sep=" ")
 }
 
 
@@ -754,6 +786,7 @@ run_test_dir <- function(dir="inst/tinytest", pattern="^test.*\\.[rR]$"
                        , lc_collate = getOption("tt.collate",NA)
                        , ... ){
 
+  t0 <- Sys.time()
 
   testfiles <- dir(dir, pattern=pattern, full.names=TRUE)
   testfiles <- locale_sort(testfiles, lc_collate=lc_collate)
@@ -778,9 +811,11 @@ run_test_dir <- function(dir="inst/tinytest", pattern="^test.*\\.[rR]$"
         , run_test_file, at_home = at_home, verbose = min(verbose,1)
         , color = color, remove_side_effects = TRUE, ...)
   }
+
+  td <- abs(Sys.time() - t0)
   # by using '(parL)|(l)apply' we get a list of tinytests objects. We need to unwind
   # one level to a list of 'tinytest' objects and class it 'tinytests'.
-  structure(unlist(test_output,recursive=FALSE), class="tinytests")
+  structure(unlist(test_output,recursive=FALSE), class="tinytests", duration=td)
 }
 
 
@@ -855,18 +890,28 @@ at_home <- function(){
 #' uses the \pkg{tinytest} test infrastructure.
 #'
 #' @param pkgname \code{[character]} scalar. Name of the package, as in the \code{DESCRIPTION} file.
-#' @param testdir \code{[character]} scalar. Path to installed directory, relative
-#' to the working directory of \code{R CMD check}.
+#' @param testdir \code{[character]} scalar. Path to installed directory. By default 
+#'        tinytest assumes that test files are in \code{inst/tinytest/}, which means
+#'        that after installation and thus during \code{R CMD check} they are in 
+#'        \code{tinytest/}. See details for using alternate paths.
+#' @param lib.loc \code{[character]} scalar. location where the package is installed.
 #' @param at_home \code{[logical]} scalar. Are we at home? (see Details)
 #' @param ncpu A positive integer, or a \code{\link{makeCluster}} object.
 #' @param ... extra arguments passed to \code{\link{run_test_dir}} (e.g. \code{ncpu}).
 #'
 #'
 #' @section Details:
-#' We set \code{at_home=FALSE} by default so \code{R CMD check} will run the same
-#' as at CRAN. See the package vignette (Section 4) for tips on how to set up
-#' the package structure.
+#' We set \code{at_home=FALSE} by default so \code{R CMD check} will run the
+#' same as at CRAN. See the package vignette (Section 4) for tips on how to set
+#' up the package structure.
 #' \code{vignette("using_tinytest",package="tinytest")}.
+#'
+#' Package authors who want to avoid installing tests with the package can
+#' create a directory under \code{tests}. If the test directoy is called
+#' \code{"tests/foo"}, use \code{test_package("pkgname", testdir="foo")} in
+#' \code{tests/tinytest.R}.
+#'
+#' 
 #'
 #' @return If \code{interactive()}, a \code{tinytests} object. If not
 #'  \code{interactive()}, an error is thrown when at least one test fails.
@@ -881,15 +926,33 @@ at_home <- function(){
 #'     tinytest::test_package("your package name")
 #' }
 #' @export
-test_package <- function(pkgname, testdir = "tinytest"
+test_package <- function(pkgname, testdir = "tinytest", lib.loc=NULL
                        , at_home=FALSE, ncpu=NULL, ...){
+  oldlibpaths <- .libPaths()
+
+  if (!is.null(lib.loc)){ 
+    e <- new.env()
+    e$libs <- c(lib.loc, oldlibpaths)
+      
+    if (!dir.exists(lib.loc)) 
+      warnf("lib.loc '%s' not found.", lib.loc)
+    .libPaths(c(lib.loc, oldlibpaths))
+  }
+
   on.exit({
     if ( is.numeric(ncpu) ) parallel::stopCluster(cluster)
+    .libPaths(oldlibpaths)
   })
 
-  testdir <- system.file(testdir, package=pkgname)
-  if ( testdir == "" ){
-    stopf("testdir '%s' not found for package '%s'",testdir, pkgname)
+  if (!dir.exists(testdir)){ # if not customized test dir
+    # find the installed test dir
+    new_testdir <- system.file(testdir, package=pkgname, lib.loc=lib.loc)
+    if (new_testdir == ""){
+      stopf("testdir '%s' not found for package '%s'",testdir, pkgname)
+    } else {
+      testdir <- new_testdir
+    }
+
   }
 
   # set up cluster if required
@@ -900,17 +963,23 @@ test_package <- function(pkgname, testdir = "tinytest"
 
   # By now we have a cluster, or NULL. Load the pkg under scrutiny.
   if ( is.null(cluster) ){
-    library(pkgname, character.only=TRUE)
+    library(pkgname, character.only=TRUE, lib.loc=lib.loc)
   } else {
-    parallel::clusterCall(cluster, library, pkgname, character.only=TRUE)
+    if (!is.null(lib.loc)){
+      # to prevent a R CMD check warning we must create a dummy libs here
+      # as well
+      libs <- NULL
+      parallel::clusterExport(cluster, "libs", envir = e)
+      parallel::clusterEvalQ(cluster, .libPaths(libs))
+    }
+    parallel::clusterCall(cluster, library, pkgname, character.only=TRUE, lib.loc=lib.loc)
   }
 
   out <- run_test_dir(testdir, at_home=at_home, cluster=cluster,...) 
   i_fail <- sapply(out, isFALSE)
   if ( any(i_fail) && !interactive() ){
-    msg <- paste( sapply(out[i_fail], format.tinytest, type="long"), collapse="\n")
-    msg <- paste(msg, "\n")
-    stop(msg, call.=FALSE)
+    writeLines(vapply(out[i_fail], format.tinytest, "", type="long"))
+    stop(sum(i_fail), " out of ", length(out), " tests failed", call.=FALSE)
   } 
   out
 }
@@ -959,7 +1028,7 @@ test_package <- function(pkgname, testdir = "tinytest"
 #' @family test-files
 #' @export
 build_install_test <- function(pkgdir="./", testdir="tinytest"
-                             , pattern="test_.+[rR]$"
+                             , pattern="^test.*\\.[rR]$"
                              , at_home=TRUE
                              , verbose=getOption("tt.verbose",2)
                              , ncpu = 1

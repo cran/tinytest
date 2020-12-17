@@ -8,6 +8,7 @@
 \alias{expect_false}
 \alias{expect_silent}
 \alias{expect_null}
+\alias{expect_inherits}
 \alias{expect_error}
 \alias{expect_warning}
 \alias{expect_message}
@@ -39,6 +40,8 @@ expect_false(current, info = NA_character_)
 expect_silent(current, quiet = TRUE, info = NA_character_)
 
 expect_null(current, info = NA_character_)
+
+expect_inherits(current, class, info = NA_character_)
 
 expect_error(current, pattern = ".*", class = "error", info = NA_character_)
 
@@ -75,10 +78,10 @@ be a single character string. Multiline comments may be separated by
 \item{quiet}{\code{[logical]} suppress output printed by the \code{current} 
 expression (see examples)}
 
-\item{pattern}{\code{[character]} A regular expression to match the message.}
-
 \item{class}{\code{[character]} For condition signals (error, warning, message)
 the class from which the condition should inherit.}
+
+\item{pattern}{\code{[character]} A regular expression to match the message.}
 }
 \value{
 A \code{\link{tinytest}} object. A tinytest object is a
@@ -93,6 +96,8 @@ Express expectations
 arguments \code{check.attributes=FALSE} and \code{use.names=FALSE}
 
 \code{expect_silent} fails when an error or warning is thrown.
+
+\code{expect_inherits} fails when \code{\link{inherits}(current,class)} returns \code{FALSE}
 
 \code{expect_stdout} Expects that output is written to \code{stdout},
 for example using \code{cat} or \code{print}. Use \code{pattern} to
@@ -124,7 +129,7 @@ expect_equal(2, c(x=2))      # FALSE
 expect_silent(1+1)           # TRUE
 expect_silent(1+"a")         # FALSE
 expect_silent(print("hihi")) # TRUE, nothing goes to screen
-expect_silent(print("hihi", quiet=FALSE)) # FALSE, and printed
+expect_silent(print("hihi"), quiet=FALSE) # TRUE, and printed
 
 }
 \seealso{

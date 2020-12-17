@@ -5,13 +5,18 @@
 #' @return For \code{summary} a \code{\link{table}} object
 #' @export
 summary.tinytests <- function(object, ...){
+  if (length(object)==0){
+    return(
+     as.table(array(0, dim=c(1,3),
+        dimnames=list(File="Total", c("Results", "fails","passes"))))
+    )
+  }  
   
   result <- factor(sapply(object, c)
             , levels=c(FALSE, TRUE, NA)
             , labels=c("fails","passes","sidefx")
             , exclude=character(0))
 
-  
 
   file   <- sapply(object, function(x) attr(x,"file"))
   if (length(object) > 0) file   <- basename(file)
@@ -83,7 +88,7 @@ any_fail <- function(x){
 #' @export
 #' @rdname tinytests
 `[.tinytests` <- function(x,i){
-   structure(unclass(x)[i], class="tinytests")
+   structure(unclass(x)[i], class="tinytests", duration=NULL)
 }
 
 #' @param passes \code{[logical]} Toggle: print passing tests?
@@ -128,14 +133,17 @@ print.tinytests <- function(x
   iside <- if (nrslt > 0) sapply(x, is.na)   else logical(0)
   ipass <- if (nrslt > 0) sapply(x, isTRUE)  else logical(0)
 
-  
+  duration <- attr(x,"duration")
+  duration_str <- if( is.null(duration) ) "fubar!"
+                  else sprintf("(%s)", humanize(duration, color=FALSE))
+
   iprn <- ifail
   if (passes)  iprn <- iprn | ipass
   if (sidefx)  iprn <- iprn | iside
 
   x <- x[iprn]
   if (sum(iprn)==0){
-    print(sprintf("All ok, %d results",nrslt))
+    cat(sprintf("All ok, %d results %s\n",nrslt, duration_str))
     return(invisible(NULL))
   }
 
@@ -152,7 +160,7 @@ print.tinytests <- function(x
     pr1 <- sprintf("Showing %d out of %d results: ", length(x), nrslt)
     pr2 <- sprintf("%d fails, %d passes", sum(ifail), sum(ipass))
     pr3 <- if( any(iside) ) sprintf(", %s side effects", sum(iside)) else ""
-    cat(pr1, pr2, pr3,"\n",sep="")
+    cat(pr1, pr2, pr3," ", duration_str, "\n",sep="")
   } 
 }
 

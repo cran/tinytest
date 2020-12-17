@@ -139,6 +139,7 @@ Currently, the following expectations are implemented.
 \code{expect\_identical(current, target)}  & equality, (using, \code{identical})\\
 \code{expect\_true(current)}               & \code{current} evaluates to \code{TRUE}\\
 \code{expect\_false(current)}              & \code{current} evaluates to \code{FALSE}\\
+\code{expect\_inherits(current, class)}    & \code{current} inherits from \code{class}\\
 \code{expect\_null(current)}               & \code{current} evaluates to \code{NULL}\\
 \code{expect\_error(current, pattern)}     & error message matching \code{pattern}\\
 \code{expect\_warning(current, pattern)}   & warning message matching \code{pattern}\\
@@ -497,7 +498,7 @@ unexported function with different arguments. Or when one of the internal
 functions implements a numerical algorithm that requires thorough testing.
 
 To test functions in your package that are not visible to users that load
-your package, use the triple-colon operato like so.
+your package, use the triple-colon operator like so.
 <<eval=FALSE>>=
 output = pkg:::some_internal_function(1)
 expect_equal(output, 2)

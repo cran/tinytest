@@ -4,13 +4,24 @@
 \alias{test_package}
 \title{Test a package during R CMD check or after installation}
 \usage{
-test_package(pkgname, testdir = "tinytest", at_home = FALSE, ncpu = NULL, ...)
+test_package(
+  pkgname,
+  testdir = "tinytest",
+  lib.loc = NULL,
+  at_home = FALSE,
+  ncpu = NULL,
+  ...
+)
 }
 \arguments{
 \item{pkgname}{\code{[character]} scalar. Name of the package, as in the \code{DESCRIPTION} file.}
 
-\item{testdir}{\code{[character]} scalar. Path to installed directory, relative
-to the working directory of \code{R CMD check}.}
+\item{testdir}{\code{[character]} scalar. Path to installed directory. By default 
+tinytest assumes that test files are in \code{inst/tinytest/}, which means
+that after installation and thus during \code{R CMD check} they are in 
+\code{tinytest/}. See details for using alternate paths.}
+
+\item{lib.loc}{\code{[character]} scalar. location where the package is installed.}
 
 \item{at_home}{\code{[logical]} scalar. Are we at home? (see Details)}
 
@@ -31,10 +42,15 @@ uses the \pkg{tinytest} test infrastructure.
 }
 \section{Details}{
 
-We set \code{at_home=FALSE} by default so \code{R CMD check} will run the same
-as at CRAN. See the package vignette (Section 4) for tips on how to set up
-the package structure.
+We set \code{at_home=FALSE} by default so \code{R CMD check} will run the
+same as at CRAN. See the package vignette (Section 4) for tips on how to set
+up the package structure.
 \code{vignette("using_tinytest",package="tinytest")}.
+
+Package authors who want to avoid installing tests with the package can
+create a directory under \code{tests}. If the test directoy is called
+\code{"tests/foo"}, use \code{test_package("pkgname", testdir="foo")} in
+\code{tests/tinytest.R}.
 }
 
 \examples{

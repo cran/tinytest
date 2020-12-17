@@ -79,7 +79,8 @@ na_str <- function(x) if ( is.na(x) ) "" else as.character(x)
 
 oneline <- function(x) sub("\\n.+","...",x)
 indent <- function(x, with="     "){
-  gsub("\\n *",paste0("\n",with),paste0(with,sub("^ +","",x)))
+  if (is.na(x)) ""
+  else gsub("\\n *",paste0("\n",with),paste0(with,sub("^ +","",x)))
 }
 
 lineformat <- function(x){
@@ -115,17 +116,15 @@ format.tinytest <- function(x,type=c("long","short"), ...){
             else if (isFALSE(x)) sprintf("FAILED[%s]",short)
             else if (is.na(x)  ) sprintf("SIDEFX[%s]",short)
   longfmt <- "----- %s: %s<%s--%s>\n%s"
-  # make room for diff and info fields when necessary
-  if (isFALSE(x)||is.na(x)) longfmt <- paste0(longfmt, "\n%s")
-  if (!is.na(d$info)) longfmt <- paste0(longfmt,"\n%s")
 
   if (type == "short"){
     sprintf("%s: %s<%s--%s> %s", result, basename(file), fst, lst, oneline(call))
   }  else {
-    sprintf(longfmt, result, file, fst, lst
-                , indent(call, with=" call| ")
-                , indent(diff, with=" diff| ")
-                , indent(info, with=" info| "))
+    str <- sprintf(longfmt, result, file, fst, lst
+                , indent(call, with=" call| "))
+    if (isFALSE(x)||is.na(x)) str <- paste0(str, "\n", indent(diff, with=" diff| "))
+    if (!is.na(d$info)) str <- paste0(str, "\n", indent(info, with=" info| "))
+    str
   }
 
 }
@@ -176,6 +175,8 @@ longdiff <- function(current, target, alt){
        if ( all(class(current) %in% c("character","ordered","factor", "POSIXt","POSIXct")) ) 
          sprintf("Expected '%s', got '%s'", target, current)
        else sprintf("Expected %s, got %s", target, current)
+  } else if (isTRUE(alt) && is.environment(current)){
+    "Equal environment objects, but with different memory location"
   } else {
     paste0(" ", alt, collapse="\n")
   }
@@ -250,7 +251,7 @@ expect_equal <- function(current, target, tolerance = sqrt(.Machine$double.eps),
 expect_identical <- function(current, target, info=NA_character_){
   result <- identical(current, target)
   diff <-  if (result) NA_character_
-           else longdiff(current, target, all.equal(target, current))
+           else longdiff(current, target, all.equal(target, current, check.attributes=TRUE))
   short <- if (result) NA_character_
            else shortdiff(current, target, tolerance=0)
   tinytest(result=result, call=sys.call(sys.parent(1)), diff=diff
@@ -328,7 +329,7 @@ expect_false <- function(current, info=NA_character_){
 #' expect_silent(1+1)           # TRUE
 #' expect_silent(1+"a")         # FALSE
 #' expect_silent(print("hihi")) # TRUE, nothing goes to screen
-#' expect_silent(print("hihi", quiet=FALSE)) # FALSE, and printed
+#' expect_silent(print("hihi"), quiet=FALSE) # TRUE, and printed
 #'
 #' @export
 expect_silent <- function(current, quiet=TRUE, info=NA_character_){
@@ -399,6 +400,29 @@ expect_null <- function(current, info=NA_character_){
     )
   }
 }
+
+
+#' @rdname expect_equal
+#' 
+#' @param class \code{[character]} A class string.
+#' @details 
+#'  \code{expect_inherits} fails when \code{\link{inherits}(current,class)} returns \code{FALSE} 
+#' @export
+expect_inherits <- function(current, class, info=NA_character_){
+  call <- sys.call(sys.parent(1))
+  res  <- inherits(current, class)
+  if (isTRUE(res)){
+    tinytest(TRUE, call=call, info=info)
+  } else {
+    tinytest(FALSE, call=call, short="attr"
+      , diff = sprintf("Expected object of class %s, got %s"
+          , paste0("<", paste(class,collapse=", "),">")
+          , paste0("<", paste(class(current), collapse=", "),">")
+      , info=info))
+  }
+
+}
+
 
 
 #' @rdname expect_equal

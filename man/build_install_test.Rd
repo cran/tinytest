@@ -7,7 +7,7 @@
 build_install_test(
   pkgdir = "./",
   testdir = "tinytest",
-  pattern = "test_.+[rR]$",
+  pattern = "^test.*\\\\.[rR]$",
   at_home = TRUE,
   verbose = getOption("tt.verbose", 2),
   ncpu = 1,

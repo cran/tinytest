@@ -57,6 +57,7 @@ the second argument represents the _desired_ value.
 | `expect_equal`                   | Data and attributes of arguments must be equal       |
 | `expect_equivalent`              | Data of arguments must be equal                      |
 | `expect_identical`               | Target and current must be `identical`               |
+| `expect_inherits`                | Current object must inherit from the desired class   |
 | `expect_null`                    | Expression must evaluate to `NULL`                   |
 | `expect_equal_to_reference`      | Object must be equal to an object stored on file     |
 | `expect_equivalent_to_reference` | Object must be equivalent to an object stored on file|
@@ -199,11 +200,11 @@ obtained <- compute_my_result()
 expect_equal(obtained, desired)
 ```
 If you wish to publish the package on CRAN, make sure that the files are small
-enough for the package to be acceptable. See the [cran repository
+enough for the package to be acceptable. See the [CRAN repository
 policy](https://cran.r-project.org/web/packages/policies.html) for explicit
 bounds on package size. Alternatively you can avoid installing the data and
 associated test files by adding them to
-[.Rbuildignore](https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Building-package-tarballs).
+[.Rinstignore](https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Package-subdirectories).
 
 
 #### More information
