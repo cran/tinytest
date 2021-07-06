@@ -8,7 +8,8 @@ report_side_effects(
   report = TRUE,
   envvar = report,
   pwd = report,
-  files = report
+  files = report,
+  locale = report
 )
 }
 \arguments{
@@ -20,6 +21,9 @@ report_side_effects(
 
 \item{files}{\code{[logical]} changes in files in the directory where the
 test file lives. Also watches subdirectories.}
+
+\item{locale}{\code{[logical]} Changes in locale settings as detected by 
+\code{link[base]{Sys.getlocale}} are reported.}
 }
 \value{
 A named \code{logical}, indicating which aspects of the environment
@@ -38,8 +42,8 @@ If this function is called in a test file, side effects are monitored from
 that point in the file and only for that file. The state of the environment
 before and after running every expression in the file are compared.
 
-There is some performance penalty in tracking external variables especially
-those that require a system call.
+There is some performance penalty in tracking external variables, especially
+for those that require a system call.
 }
 
 \section{Note}{

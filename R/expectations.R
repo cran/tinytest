@@ -4,10 +4,13 @@ isTRUE <- function(x){
   is.logical(x) && length(x) == 1L && !is.na(x) && x
 }
 
-# define this internally, since it was introduced at R 3.5.0
-isFALSE <- function(x){
-  is.logical(x) && length(x) == 1L && !is.na(x) && !x
+if (!exists("isFALSE", mode = "function", envir = baseenv())) {
+  # define this internally, since it was introduced at R 3.5.0
+  isFALSE <- function(x){
+    is.logical(x) && length(x) == 1L && !is.na(x) && !x
+  }
 }
+
 
 #' Tinytest constructor
 #'
@@ -54,8 +57,9 @@ isFALSE <- function(x){
 #' @keywords internal
 #' @export
 tinytest <- function(result, call
+    , trace= NULL
     , diff = NA_character_
-    , short= c(NA_character_,"data","attr","xcpt", "envv","wdir","file")
+    , short= c(NA_character_,"data","attr","xcpt", "envv","wdir","file","lcle")
     , info = NA_character_
     , file = NA_character_
     , fst  = NA_integer_
@@ -65,6 +69,7 @@ tinytest <- function(result, call
   structure(result         # logical TRUE/FALSE
     , class    = "tinytest"
     , call     = call  # call creating or motivating the object
+    , trace    = trace # list containing stack trace
     , diff     = diff  # diff if isFALSE(result)
     , short    = short # short diff (4 char)
     , info     = info  # user-defined info
@@ -88,6 +93,17 @@ lineformat <- function(x){
   else sprintf("%d",x)
 }
 
+# check if 'call' is a subcall of 'x'.
+# call and x are both objects of class call.
+has_call <- function(call, x){
+  # we do this to ignore possible srcref.
+  attributes(x)    <- NULL
+  attributes(call) <- NULL
+
+  identical(x,call) || length(x) > 1 && any(sapply(x, has_call, call)) 
+
+}
+
 #' @param type \code{[logical]} Toggle format type
 #'
 #' @return A character string
@@ -104,7 +120,19 @@ format.tinytest <- function(x,type=c("long","short"), ...){
   type <- match.arg(type)
 
   d <- attributes(x)
-  call  <- paste0(deparse(d$call), collapse="\n")
+  # trycatch to make absolutely sure that we always return to the default
+  # print, should something go wrong.
+  i <- tryCatch(sapply(d$trace, has_call, d$call), error=function(e) NULL)
+  need_trace <- any(i) && all(i < length(d$trace))
+  
+
+  call  <- if( !need_trace ){
+              paste0(deparse(d$call, control=NULL), collapse="\n")
+           } else {
+              i1 <- which(i)[length(which(i))]
+              j <- seq(i1,length(d$trace))
+              paste0(sapply(d$trace[j], deparse, control=NULL), collapse="\n-->")
+           }
   fst   <- lineformat(d$fst, ...)
   lst   <- lineformat(d$lst, ...)
   file  <- na_str(d$file)
@@ -112,16 +140,18 @@ format.tinytest <- function(x,type=c("long","short"), ...){
   diff  <- d$diff
   info  <- na_str(d$info)
 
+
   result <- if (isTRUE(x)) "PASSED      " 
             else if (isFALSE(x)) sprintf("FAILED[%s]",short)
             else if (is.na(x)  ) sprintf("SIDEFX[%s]",short)
+
   longfmt <- "----- %s: %s<%s--%s>\n%s"
 
   if (type == "short"){
     sprintf("%s: %s<%s--%s> %s", result, basename(file), fst, lst, oneline(call))
   }  else {
     str <- sprintf(longfmt, result, file, fst, lst
-                , indent(call, with=" call| "))
+                , indent(call,  with=" call| "))
     if (isFALSE(x)||is.na(x)) str <- paste0(str, "\n", indent(diff, with=" diff| "))
     if (!is.na(d$info)) str <- paste0(str, "\n", indent(info, with=" info| "))
     str
@@ -169,12 +199,18 @@ is_scalar <- function(x){
 
 # alt: alternative output
 longdiff <- function(current, target, alt){
+  equivalent_data <- all.equal(target, current
+                       , check.attributes=FALSE
+                       , use.names=FALSE)
+
   if ( identical(class(current), class(target)) && 
        is_scalar(current) && 
        is_scalar(target) ){
-       if ( all(class(current) %in% c("character","ordered","factor", "POSIXt","POSIXct")) ) 
-         sprintf("Expected '%s', got '%s'", target, current)
-       else sprintf("Expected %s, got %s", target, current)
+        if (!isTRUE(equivalent_data)){ 
+          sprintf("Expected '%s', got '%s'", target, current)
+        } else {
+          "Attributes differ"
+        }
   } else if (isTRUE(alt) && is.environment(current)){
     "Equal environment objects, but with different memory location"
   } else {
@@ -186,7 +222,7 @@ longdiff <- function(current, target, alt){
 # are there differences in data and/or attributes, or just in the attributes?
 shortdiff <- function(current, target, ...){
   equivalent_data <- all.equal(target, current
-                       , check_attributes=FALSE
+                       , check.attributes=FALSE
                        , use.names=FALSE,...)
   if (isTRUE(equivalent_data)) "attr"
   else "data"
@@ -417,8 +453,8 @@ expect_inherits <- function(current, class, info=NA_character_){
     tinytest(FALSE, call=call, short="attr"
       , diff = sprintf("Expected object of class %s, got %s"
           , paste0("<", paste(class,collapse=", "),">")
-          , paste0("<", paste(class(current), collapse=", "),">")
-      , info=info))
+          , paste0("<", paste(class(current), collapse=", "),">"))
+      , info=info)
   }
 
 }
@@ -429,13 +465,14 @@ expect_inherits <- function(current, class, info=NA_character_){
 #' @param pattern \code{[character]} A regular expression to match the message.
 #' @param class \code{[character]} For condition signals (error, warning, message)
 #'        the class from which the condition should inherit.
+#' @param ... passed on to \code{\link{grepl}} (useful for e.g. \code{fixed=TRUE}).
 #' @export
-expect_error <- function(current, pattern=".*", class="error", info=NA_character_){
+expect_error <- function(current, pattern=".*", class="error", info=NA_character_, ...){
   result <- FALSE
   diff <- "No error"
   
   tryCatch(current, error=function(e){
-            matches <- grepl(pattern, e$message)
+            matches <- grepl(pattern, e$message, ...)
             isclass <- inherits(e, class)
 
             if (matches && isclass){
@@ -481,7 +518,7 @@ first_n <- function(L, n=3){
 
 #' @rdname expect_equal
 #' @export
-expect_warning <- function(current, pattern=".*", class="warning", info=NA_character_){
+expect_warning <- function(current, pattern=".*", class="warning", info=NA_character_,...){
  
   messages <- list()
   warnings <- list()  
@@ -506,7 +543,7 @@ expect_warning <- function(current, pattern=".*", class="warning", info=NA_chara
  
  
   results <- sapply(warnings, function(w) {
-    inherits(w, class) && grepl(pattern, w$message)
+    inherits(w, class) && grepl(pattern, w$message, ...)
   })
 
   if (any(results)){ ## happy flow
@@ -547,7 +584,7 @@ expect_warning <- function(current, pattern=".*", class="warning", info=NA_chara
 
 #' @rdname expect_equal
 #' @export
-expect_message <- function(current, pattern=".*", class="message", info=NA_character_){
+expect_message <- function(current, pattern=".*", class="message", info=NA_character_, ...){
  
   messages <- list()
   warnings <- list()  
@@ -572,7 +609,7 @@ expect_message <- function(current, pattern=".*", class="message", info=NA_chara
  
  
   results <- sapply(messages, function(m) {
-    inherits(m, class) && grepl(pattern, m$message)
+    inherits(m, class) && grepl(pattern, m$message, ...)
   })
 
   if (any(results)){ ## happy flow
@@ -621,7 +658,7 @@ expect_message <- function(current, pattern=".*", class="message", info=NA_chara
 #'
 #'
 #' @export
-expect_stdout <- function(current, pattern=".*", info=NA_character_){
+expect_stdout <- function(current, pattern=".*", info=NA_character_, ...){
   value <- ""
   msg <- NA_character_
   
@@ -635,7 +672,7 @@ expect_stdout <- function(current, pattern=".*", info=NA_character_){
   close(tc)
 
   value <- paste(value, collapse="\n")
-  result <- grepl(pattern, value)
+  result <- grepl(pattern, value, ...)
   if (!result)
     msg <- sprintf("output '%s'\n does not match pattern '%s'", value, pattern)
 
@@ -664,10 +701,15 @@ expect_stdout <- function(current, pattern=".*", info=NA_character_){
 #' \code{\link{tempfile}}, or the test is skipped on CRAN, using
 #' \code{\link{at_home}}.
 #' 
-#' Also note that \code{\link{build_install_test}} clones the package and
+#' \code{\link{build_install_test}} clones the package and
 #' builds and tests it in a separate R session in the background. This means
 #' that if you create a file located at \code{tempfile()} during the run, this
 #' file is destroyed when the separate R session is closed.
+#'
+#' \code{expect_error}, \code{expect_warning} and \code{expect_message} will
+#' concatenate all messages when multiple exceptions are thrown, before
+#' matching the message to \code{pattern}.
+#' 
 #'
 #'
 #' @family test-functions
@@ -727,6 +769,8 @@ eetr <- function (current, file, type=c("equal","equivalent"), ...){
 #' @param pwd    \code{[logical]} changes in working directory
 #' @param files  \code{[logical]} changes in files in the directory where the
 #'   test file lives. Also watches subdirectories.
+#' @param locale \code{[logical]} Changes in locale settings as detected by 
+#'   \code{link[base]{Sys.getlocale}} are reported.
 #'
 #' @section Details:
 #' A side effect causes a change in an external variable outside of the scope
@@ -737,8 +781,8 @@ eetr <- function (current, file, type=c("equal","equivalent"), ...){
 #' that point in the file and only for that file. The state of the environment
 #' before and after running every expression in the file are compared.
 #'
-#' There is some performance penalty in tracking external variables especially
-#' those that require a system call.
+#' There is some performance penalty in tracking external variables, especially
+#' for those that require a system call.
 #'
 #' @section Note:
 #' There could be side-effects that are untrackable by \pkg{tinytest}. This includes
@@ -760,9 +804,9 @@ eetr <- function (current, file, type=c("equal","equivalent"), ...){
 #' report_side_effects(report=FALSE, envvar=TRUE)
 #'
 #' @export
-report_side_effects <- function(report=TRUE, envvar=report, pwd=report, files=report){
+report_side_effects <- function(report=TRUE, envvar=report, pwd=report, files=report, locale=report){
   stopifnot(is.logical(envvar))
-  list(envvar=envvar, pwd=pwd, files=files)
+  list(envvar=envvar, pwd=pwd, files=files, locale=locale)
 } 
 
 # generate user-facing function that captures 'report_side_effects'
@@ -778,6 +822,9 @@ capture_se <- function(fun, env){
       env$filesdir <- getwd()
       env$files <- file.info(dir(env$filesdir, recursive=TRUE, full.names=TRUE))
     }
+    if (out[['locale']]){
+      env$locale <- Sys.getlocale()
+    }
     out
   }
 }
@@ -790,11 +837,50 @@ report_envvar <- function(env){
   current <- Sys.getenv()
   if (identical(old, current)) return(NULL)
 
-  out <- envdiff(env$envvar, current)
+  out <- dlist_diff(env$envvar, current,"envvar")
   env$envvar <- current
   out
 }
 
+locale_vector <- function(x){
+  x <- strsplit(x,";")[[1]]
+  values <- sub("^.*=","",x)
+  names(values) <- sub("=.*","",x)
+  # make sure order is normalized
+  values <- values[order(names(values))]
+  values
+}
+
+report_locale <- function(env){
+  if ( !isTRUE(env$sidefx[['locale']]) ) return(NULL)
+
+  current <- Sys.getlocale()
+  
+  if (identical(env$locale, current)) return(NULL)
+  # report all locale settings that are different.
+  out <- character(0)
+  cur <- locale_vector(current)
+  old <- locale_vector(env$locale)
+
+  i <- cur != old
+  cur <- cur[i] 
+  old <- old[i]
+
+  
+  diff <- sprintf("%s changed from '%s' to '%s'", names(cur), old, cur)
+  diff <- paste(diff, collapse="\n")
+
+  env$locale <- current
+
+  tinytest(NA
+    , call  = sys.call(sys.parent(1))
+    , diff  = diff
+    , short = "lcle"
+    , info  = "Locale setting changed"
+  )
+
+
+}
 
 
 
@@ -802,7 +888,7 @@ report_envvar <- function(env){
 #  calls to Sys.getenv(). The output is a string reporting
 #  added, removed, changed environment variables. Each report
 #  separated by a newline \n
-envdiff <- function(old, new){
+dlist_diff <- function(old, new, type){
   if (identical(old,new)) return()
   
   old.vars <- names(old)
@@ -816,16 +902,16 @@ envdiff <- function(old, new){
   changed <- survived[ old[survived] != new[survived] ]
 
   rem <- if (length(removed) == 0 ) NULL
-         else sprintf("Removed envvar '%s' with value '%s'", removed, old[removed])
+         else sprintf("Removed %s '%s' with value '%s'", type, removed, old[removed])
   if(!is.null(rem)) rem <- paste(rem, collapse="\n")
 
   add <- if (length(added) == 0) NULL
-         else sprintf("Added   envvar '%s' with value '%s'", added, new[added])
+         else sprintf("Added %s '%s' with value '%s'", type, added, new[added])
   if (!is.null(add)) add <- paste(add, collapse="\n")
 
   cng <- if ( length(changed) == 0 ) NULL
-         else sprintf("Changed envvar '%s' from '%s' to '%s'"
-          , changed, old[changed], new[changed])
+         else sprintf("Changed %s '%s' from '%s' to '%s'"
+          , type, changed, old[changed], new[changed])
   if (!is.null(cng)) cng <- paste(cng, collapse="\n")
   long <- paste(c(rem, add, cng),collapse="\n")
 

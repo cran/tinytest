@@ -2,6 +2,11 @@
 #' @importFrom parallel makeCluster parLapply stopCluster
 {}
 
+if (!exists("nullfile", mode = "function", envir = baseenv())) {
+  nullfile <- function() if (.Platform$OS.type == "windows") "nul:" else "/dev/null"
+}
+
+
 # directory from which run_test_file() was called (i.e. before it temporarily
 # changes directory
 
@@ -108,6 +113,7 @@ capture <- function(fun, env){
       attr(out,"fst")  <- env$fst
       attr(out,"lst")  <- env$lst
       attr(out,"call") <- env$call
+      attr(out,"trace")<- sys.calls()
       # if not NA, the result is from an expect_ function
       # if NA, it is a side-effect, and we do not attempt to
       # improve the call's format
@@ -222,9 +228,27 @@ capture_envvar <- function(fun, env){
 
 unset_envvar <- function(env){
   L <- as.list(env)
-  # Sys.setenv chrashes with empty list
+  # Sys.setenv crashes with empty list
   if ( length(L)>0 ) do.call(Sys.setenv, L)
 }
+
+# locale: old locale settings, recorded before running the
+# file. (character scalar).
+reset_locale <- function(locale){
+  if ( identical(locale, Sys.getlocale()) ) return()
+
+  lcs <- strsplit(locale,";")[[1]]
+  vals <- sub("^.*=","",lcs)
+  names(vals) <- sub("=.*","", lcs)
+  for ( x in names(vals) ){
+     # we use tryCatch as Sys.getlocale() may retrieve locale
+     # settings that can not be set by Sys.setlocale()
+     tryCatch(Sys.setlocale(category = x, locale = vals[x])
+        , error = function(e) NULL, warning = function(w) NULL)
+  }
+  invisible(NULL)
+}
+
 
 capture_options <- function(fun, env){
   function(...){
@@ -303,7 +327,7 @@ add_locally_masked_functions <- function(envir, output){
 #' @export
 using <- function(package, quietly=TRUE){
   pkg <- as.character(substitute(package))
-  if ( !require(pkg, quietly=TRUE, character.only=TRUE) ){
+  if ( !require(pkg, quietly=quietly, character.only=TRUE) ){
     stopf("Package %s could not be loaded",pkg)
   }
   ext <- getOption("tt.extensions", FALSE)
@@ -519,7 +543,7 @@ run_test_file <- function( file
   # set environment variables (if any) to control the R environment during testing.
   if (length(set_env) > 0){
     # first, record current settings
-    old_env_var <- sapply(names(set_env), Sys.getenv, USE.NAMES=TRUE)
+    old_env_var <- sapply(names(set_env), Sys.getenv, unset=NA_character_, USE.NAMES=TRUE)
     # new settings
     do.call(Sys.setenv, set_env)
   }
@@ -529,7 +553,7 @@ run_test_file <- function( file
 
 
   # make sure that plots get redirected to oblivion
-  grDevices::pdf(file=tempfile())  
+  grDevices::pdf(file=nullfile())  
 
   ## this will store the names of all environment
   ## variables created while running the file.
@@ -538,6 +562,10 @@ run_test_file <- function( file
   ## this will store option values that are overwritten by
   ## the user when running the file.
   oldop <- new.env()
+
+  ## Store locale settings that may be overwritten
+  ## by the user when running the file
+  locale <- Sys.getlocale()
 
   ## clean up side effects
   on.exit({
@@ -552,10 +580,16 @@ run_test_file <- function( file
         unset_envvar(envvar)
         # reset options to the state before running 'file'
         reset_options(oldop)
+        # reset locale settings to starting values
+        reset_locale(locale)
       }
       grDevices::dev.off()
       # return env var to values before running run_test_file
-      sapply(names(set_env), function(x) Sys.setenv(x = old_env_var[x]))
+      if (exists("old_env_var")){
+        unset <- is.na(old_env_var)
+        Sys.unsetenv(names(old_env_var)[unset])
+        if (any(!unset)) do.call(Sys.setenv, as.list(old_env_var)[!unset])
+      }
   })
 
 
@@ -579,7 +613,8 @@ run_test_file <- function( file
   ## Reduce user side effects by capturing options that will be reset
   ## on exit
   e$options <- capture_options(options, oldop)
-  
+ 
+ 
   ## Set useFancyQuotes, which is usually done by startup.Rs, the location
   ## of which is defined by envvar R_TESTS, which we set to empty now.
   ## See GH issues 36,37
@@ -595,6 +630,7 @@ run_test_file <- function( file
   local_report_envvar <- capture(report_envvar, o)
   local_report_cwd    <- capture(report_cwd, o)
   local_report_files  <- capture(report_files, o)
+  local_report_locale <- capture(report_locale, o)  
 
   # parse file, store source reference.
   check_double_colon(filename=file)
@@ -607,7 +643,7 @@ run_test_file <- function( file
   if (nchar(prfile) > 30 ){
     prfile <- paste0("..",substr(prfile, nchar(prfile)-27,nchar(prfile)))
   }  
-  prfile <- paste("Running",gsub(" ",".",sprintf("%-30s",basename(file))))
+  prfile <- gsub(" ",".",sprintf("%-30s",basename(file)))
 
 
   for ( i in seq_along(parsed) ){
@@ -621,6 +657,8 @@ run_test_file <- function( file
     local_report_envvar(sidefx)
     local_report_cwd(sidefx)
     local_report_files(sidefx)
+    local_report_locale(sidefx)
+
     if (verbose == 2) print_status(prfile, o, color, print=TRUE)
   }
   td <- abs(Sys.time() - t0)
@@ -698,7 +736,7 @@ print_status <- function(filename, env, color, print=TRUE){
   else sprintf(if (color) "\033[0;31m%d fails\033[0m" else "%d fails", env$nfail())
 
   side <- if (env$nside() == 0) ""
-  else  sprintf(if (color) "\033[0;93m%d side-effects\033[0m" else "%d side-effects", env$nside())  
+  else  sprintf(if (color) "\033[0;93m%d side-effects\033[0m " else "%d side-effects ", env$nside())  
 
   if(print) cat(prefix, fails, side, sep=" ")
   else paste(prefix, fails, side, sep=" ")
@@ -812,7 +850,7 @@ run_test_dir <- function(dir="inst/tinytest", pattern="^test.*\\.[rR]$"
         , color = color, remove_side_effects = TRUE, ...)
   }
 
-  td <- abs(Sys.time() - t0)
+  td <- abs(as.numeric(Sys.time()) - as.numeric(t0))
   # by using '(parL)|(l)apply' we get a list of tinytests objects. We need to unwind
   # one level to a list of 'tinytest' objects and class it 'tinytests'.
   structure(unlist(test_output,recursive=FALSE), class="tinytests", duration=td)
@@ -1048,7 +1086,7 @@ build_install_test <- function(pkgdir="./", testdir="tinytest"
 
   pkg <- normalizePath(pkgdir, winslash="/")
 
-  pkgname <- read.dcf(file.path(pkg, "DESCRIPTION"))[1]
+  pkgname <- read.dcf(file.path(pkg, "DESCRIPTION"), fields = "Package")
 
   pattern <- gsub("\\", "\\\\", pattern, fixed=TRUE)
 

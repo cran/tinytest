@@ -43,23 +43,31 @@ expect_null(current, info = NA_character_)
 
 expect_inherits(current, class, info = NA_character_)
 
-expect_error(current, pattern = ".*", class = "error", info = NA_character_)
+expect_error(
+  current,
+  pattern = ".*",
+  class = "error",
+  info = NA_character_,
+  ...
+)
 
 expect_warning(
   current,
   pattern = ".*",
   class = "warning",
-  info = NA_character_
+  info = NA_character_,
+  ...
 )
 
 expect_message(
   current,
   pattern = ".*",
   class = "message",
-  info = NA_character_
+  info = NA_character_,
+  ...
 )
 
-expect_stdout(current, pattern = ".*", info = NA_character_)
+expect_stdout(current, pattern = ".*", info = NA_character_, ...)
 }
 \arguments{
 \item{current}{\code{[R object or expression]} Outcome or expression under scrutiny.}
@@ -73,7 +81,7 @@ to \code{\link[base]{all.equal} (tolerance)}}
 be a single character string. Multiline comments may be separated by
 \code{"\\n"}.}
 
-\item{...}{Passed to \code{all.equal}}
+\item{...}{passed on to \code{\link{grepl}} (useful for e.g. \code{fixed=TRUE}).}
 
 \item{quiet}{\code{[logical]} suppress output printed by the \code{current} 
 expression (see examples)}

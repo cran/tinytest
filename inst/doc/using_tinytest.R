@@ -151,51 +151,51 @@ if ( Sys.info()[['sysname']] == "Windows"){
 
 
 ###################################################
-### code chunk number 22: using_tinytest.Rnw:408-409
+### code chunk number 22: using_tinytest.Rnw:409-410
 ###################################################
 run_test_file("test_se.R", verbose=1)
 
 
 ###################################################
-### code chunk number 23: using_tinytest.Rnw:455-456 (eval = FALSE)
+### code chunk number 23: using_tinytest.Rnw:456-457 (eval = FALSE)
 ###################################################
 ## setup_tinytest("/path/to/your/package")
 
 
 ###################################################
-### code chunk number 24: using_tinytest.Rnw:469-470 (eval = FALSE)
+### code chunk number 24: using_tinytest.Rnw:470-471 (eval = FALSE)
 ###################################################
 ## test_all("/path/to/your/package")
 
 
 ###################################################
-### code chunk number 25: using_tinytest.Rnw:481-482 (eval = FALSE)
+### code chunk number 25: using_tinytest.Rnw:482-483 (eval = FALSE)
 ###################################################
 ##   build_install_test("/path/to/your/package")
 
 
 ###################################################
-### code chunk number 26: using_tinytest.Rnw:502-504 (eval = FALSE)
+### code chunk number 26: using_tinytest.Rnw:503-505 (eval = FALSE)
 ###################################################
 ## output = pkg:::some_internal_function(1)
 ## expect_equal(output, 2)
 
 
 ###################################################
-### code chunk number 27: using_tinytest.Rnw:554-556 (eval = FALSE)
+### code chunk number 27: using_tinytest.Rnw:555-557 (eval = FALSE)
 ###################################################
 ## dat <- read.csv("women.csv")
 ## expect_equal(dat, women)
 
 
 ###################################################
-### code chunk number 28: using_tinytest.Rnw:568-569
+### code chunk number 28: using_tinytest.Rnw:569-570
 ###################################################
 options(prompt="  ", continue="  ")
 
 
 ###################################################
-### code chunk number 29: using_tinytest.Rnw:571-576 (eval = FALSE)
+### code chunk number 29: using_tinytest.Rnw:572-577 (eval = FALSE)
 ###################################################
 ## # contents of pkgdir/tests/tinytest.R
 ## if ( requireNamespace("tinytest", quietly=TRUE) ){
@@ -205,38 +205,38 @@ options(prompt="  ", continue="  ")
 
 
 ###################################################
-### code chunk number 30: using_tinytest.Rnw:581-582
+### code chunk number 30: using_tinytest.Rnw:582-583
 ###################################################
 home <- identical( Sys.getenv("HONEYIMHOME"), "TRUE" )
 
 
 ###################################################
-### code chunk number 31: using_tinytest.Rnw:586-587 (eval = FALSE)
+### code chunk number 31: using_tinytest.Rnw:587-588 (eval = FALSE)
 ###################################################
 ## home <- length(unclass(packageVersion("PKGNAME"))[[1]]) == 4
 
 
 ###################################################
-### code chunk number 32: using_tinytest.Rnw:591-592
+### code chunk number 32: using_tinytest.Rnw:592-593
 ###################################################
 options(prompt="R> ", continue="   ")
 
 
 ###################################################
-### code chunk number 33: using_tinytest.Rnw:599-601
+### code chunk number 33: using_tinytest.Rnw:600-602
 ###################################################
 run_test_file("test_hehe.R", verbose=0)
 run_test_file("test_hehe.R", verbose=0, at_home=FALSE)
 
 
 ###################################################
-### code chunk number 34: using_tinytest.Rnw:625-626 (eval = FALSE)
+### code chunk number 34: using_tinytest.Rnw:626-627 (eval = FALSE)
 ###################################################
 ## tinytest::test_package("hehe")
 
 
 ###################################################
-### code chunk number 35: using_tinytest.Rnw:668-675 (eval = FALSE)
+### code chunk number 35: using_tinytest.Rnw:669-676 (eval = FALSE)
 ###################################################
 ## require(dittodb)
 ## with_mock_path(
@@ -248,25 +248,25 @@ run_test_file("test_hehe.R", verbose=0, at_home=FALSE)
 
 
 ###################################################
-### code chunk number 36: using_tinytest.Rnw:686-687 (eval = FALSE)
+### code chunk number 36: using_tinytest.Rnw:687-688 (eval = FALSE)
 ###################################################
 ## test_package("tinytest", set_env = list(WA_BABALOOBA="BA_LA_BAMBOO"))
 
 
 ###################################################
-### code chunk number 37: using_tinytest.Rnw:717-718 (eval = FALSE)
+### code chunk number 37: using_tinytest.Rnw:718-719 (eval = FALSE)
 ###################################################
 ## build_install_test("/path/to/your/package", ncpu=2)
 
 
 ###################################################
-### code chunk number 38: using_tinytest.Rnw:729-730 (eval = FALSE)
+### code chunk number 38: using_tinytest.Rnw:730-731 (eval = FALSE)
 ###################################################
 ## test_package("PACKAGENAME", ncpu=2)
 
 
 ###################################################
-### code chunk number 39: using_tinytest.Rnw:752-755 (eval = FALSE)
+### code chunk number 39: using_tinytest.Rnw:753-756 (eval = FALSE)
 ###################################################
 ## cl <- parallel::makeCluster(4, outfile="")
 ## parallel::clusterCall(cl, source, "R/myfunctions.R")
@@ -274,7 +274,7 @@ run_test_file("test_hehe.R", verbose=0, at_home=FALSE)
 
 
 ###################################################
-### code chunk number 40: using_tinytest.Rnw:762-765 (eval = FALSE)
+### code chunk number 40: using_tinytest.Rnw:763-766 (eval = FALSE)
 ###################################################
 ## parallel::clusterCall(cl, source, "R/myfunctions.R")
 ## test_all(cluster=cl)
@@ -282,7 +282,7 @@ run_test_file("test_hehe.R", verbose=0, at_home=FALSE)
 
 
 ###################################################
-### code chunk number 41: using_tinytest.Rnw:800-809
+### code chunk number 41: using_tinytest.Rnw:801-810
 ###################################################
 # exported, user-visible function
 inch2cm <- function(x){
@@ -296,7 +296,7 @@ conversion_factor <- function(unit){
 
 
 ###################################################
-### code chunk number 42: using_tinytest.Rnw:852-860
+### code chunk number 42: using_tinytest.Rnw:853-861
 ###################################################
 pound2kg <- function(x){
   stopifnot( is.numeric(x) )
@@ -309,7 +309,7 @@ pound2kg <- function(x){
 
 
 ###################################################
-### code chunk number 43: using_tinytest.Rnw:879-885 (eval = FALSE)
+### code chunk number 43: using_tinytest.Rnw:880-886 (eval = FALSE)
 ###################################################
 ##     expect_equal(pound2kg(1), 1/2.2046  )
 ##     # test for expected warning, store output
@@ -320,7 +320,7 @@ pound2kg <- function(x){
 
 
 ###################################################
-### code chunk number 44: using_tinytest.Rnw:930-936
+### code chunk number 44: using_tinytest.Rnw:931-937
 ###################################################
 bad_function <- function(file){
   oldwd <- getwd()
@@ -331,7 +331,7 @@ bad_function <- function(file){
 
 
 ###################################################
-### code chunk number 45: using_tinytest.Rnw:943-949
+### code chunk number 45: using_tinytest.Rnw:944-950
 ###################################################
 good_function <- function(file){
   oldwd <- getwd()

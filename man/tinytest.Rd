@@ -7,8 +7,9 @@
 tinytest(
   result,
   call,
+  trace = NULL,
   diff = NA_character_,
-  short = c(NA_character_, "data", "attr", "xcpt", "envv", "wdir", "file"),
+  short = c(NA_character_, "data", "attr", "xcpt", "envv", "wdir", "file", "lcle"),
   info = NA_character_,
   file = NA_character_,
   fst = NA_integer_,
