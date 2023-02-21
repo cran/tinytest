@@ -33,10 +33,6 @@ sure that the file is either stored with your tests, or generated with
 builds and tests it in a separate R session in the background. This means
 that if you create a file located at \code{tempfile()} during the run, this
 file is destroyed when the separate R session is closed.
-
-\code{expect_error}, \code{expect_warning} and \code{expect_message} will
-concatenate all messages when multiple exceptions are thrown, before
-matching the message to \code{pattern}.
 }
 \examples{
 filename <- tempfile()
@@ -53,6 +49,8 @@ expect_equal_to_reference(2, file=filename)
 \seealso{
 Other test-functions: 
 \code{\link{expect_equal}()},
+\code{\link{expect_length}()},
+\code{\link{expect_match}()},
 \code{\link{ignore}()}
 }
 \concept{test-functions}

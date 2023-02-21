@@ -56,6 +56,7 @@ expect_warning(
   pattern = ".*",
   class = "warning",
   info = NA_character_,
+  strict = FALSE,
   ...
 )
 
@@ -64,6 +65,7 @@ expect_message(
   pattern = ".*",
   class = "message",
   info = NA_character_,
+  strict = FALSE,
   ...
 )
 
@@ -90,6 +92,9 @@ expression (see examples)}
 the class from which the condition should inherit.}
 
 \item{pattern}{\code{[character]} A regular expression to match the message.}
+
+\item{strict}{\code{[logical]} scalar. If set to \code{TRUE}, any exception 
+worse than the wanted exception will cause the test to fail.}
 }
 \value{
 A \code{\link{tinytest}} object. A tinytest object is a
@@ -116,6 +121,14 @@ Each \code{expect_haha} function can also be called as \code{checkHaha}.
 Although the interface is not entirely the same, it is expected that
 this makes migration from the \code{RUnit} framework a little easier, for those
 who wish to do so.
+
+\code{expect_error}, \code{expect_warning} and \code{expect_message} will
+concatenate all messages when multiple exceptions are thrown, before
+matching the message to \code{pattern}.
+
+When speccifying regular expression patterns for errors, warnings or messages,
+note that \code{\link[base]{message}} adds a LF character by default at the end
+of the message string.
 }
 \section{More information and examples}{
 
@@ -143,6 +156,8 @@ expect_silent(print("hihi"), quiet=FALSE) # TRUE, and printed
 \seealso{
 Other test-functions: 
 \code{\link{expect_equal_to_reference}()},
+\code{\link{expect_length}()},
+\code{\link{expect_match}()},
 \code{\link{ignore}()}
 }
 \concept{test-functions}

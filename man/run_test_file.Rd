@@ -12,6 +12,7 @@ run_test_file(
   remove_side_effects = TRUE,
   side_effects = FALSE,
   set_env = list(),
+  encoding = "unknown",
   ...
 )
 }
@@ -34,6 +35,9 @@ or a list of arguments to pass to \code{\link{report_side_effects}}.}
 \item{set_env}{\code{[named list]}. Key=value pairs of environment variables
 that will be set before the test file is run and reset afterwards. These are not
 counted as side effects of the code under scrutiny.}
+
+\item{encoding}{\code{[character]} Define encoding argument passed to \code{\link[base]{parse}}
+when parsing \code{file}.}
 
 \item{...}{Currently unused}
 }

@@ -182,18 +182,23 @@ ignore <- function(fun){
   }
 }
 
-#' Stop testing
+#' Stop testing (conditionally)
 #'
-#' Call this function to exit a test file.
+#' Use \code{exit_file} to exit a file with a custom message, or use
+#' \code{exit_if} to exit if one or more conditions are met. \code{exit_if}
+#' will create a message akin to messages created by \code{\link[base]{stopifnot}}.
 #'
 #' @param msg \code{[character]} An optional message to print after exiting.
-#'
+#' @param ... A comma-separated list of conditions.
 #'
 #' @return The exit message
 #'
 #' @examples
 #' exit_file("I'm too tired to test")
-#'
+#' exit_if_not(packageVersion("tinytest")  >= "1.0.0")
+#' \dontrun{
+#' exit_if_not(requireNamespace("foo",quietly=TRUE))
+#' }
 #' @family test-files
 #' @export
 exit_file <- function(msg="") msg
@@ -201,10 +206,31 @@ exit_file <- function(msg="") msg
 # masking function to to call within run_test_file
 capture_exit <- function(fun, env){
   function(...){
+    out <- fun(...)
     env$exit <- TRUE
-    env$exitmsg <- fun(...)
+    if (is.character(out)){
+      env$exitmsg <- out
+    } else {
+      env$exitmsg <- tryCatch(as.character(out), error=function(e) "???")
+    }
   }
 }
+
+#' @rdname exit_file
+#' @export
+exit_if_not <- function(...){
+  L <- as.list(substitute(list(...))[-1])
+  msg <- NULL
+  for ( e in L ){
+    if ( !isTRUE(eval(e)) ){
+      str <- paste0(deparse(e), collapse=" ")
+      msg <- sprintf("'%s' is not TRUE", str)
+      break
+    }
+  }
+  msg
+}
+
 
 
 
@@ -275,6 +301,7 @@ add_locally_masked_functions <- function(envir, output){
   # it is faster then loading via getFromNamespace()
   envir$expect_equal        <- capture(expect_equal, output)
   envir$expect_equivalent   <- capture(expect_equivalent, output)
+  envir$expect_length       <- capture(expect_length, output)
   envir$expect_true         <- capture(expect_true, output)
   envir$expect_false        <- capture(expect_false, output)
   envir$expect_inherits     <- capture(expect_inherits, output)
@@ -288,6 +315,7 @@ add_locally_masked_functions <- function(envir, output){
   envir$expect_equal_to_reference      <- capture(expect_equal_to_reference, output)
   envir$expect_equivalent_to_reference <- capture(expect_equivalent_to_reference, output)
   envir$exit_file           <- capture_exit(exit_file, output)
+  envir$exit_if_not         <- capture_exit(exit_if_not, output)
   envir$ignore              <- ignore
   envir$at_home             <- tinytest::at_home
 
@@ -337,7 +365,7 @@ using <- function(package, quietly=TRUE){
   } else {
     ext
   }
-  names(out) <- pkg
+  if (length(out) == 1) names(out) <- pkg
   invisible(out)
 }
 
@@ -347,22 +375,24 @@ capture_using <- function(fun, envir, output){
     ext <- fun(...)
     
     # get package name
-    pkg <- names(ext)
-    functions <- ext[[pkg]]
+    pkgs <- names(ext)
 
-    for ( func in functions ){ # get funcy!
-      # get function object from namespace
-      f <- tryCatch(getFromNamespace(func, pkg)
-          , error = function(e){
-              msg <- sprintf("Loading '%s' extensions failed with message:\n'%s'"
-                            , pkg, e$message)
-              warning(msg, call.=FALSE)
-            })
-
-      # mask'm like there's no tomorrow 
-      envir[[func]] <- capture(f, output)
-      
+    for ( pkg in pkgs ){
+      functions <- ext[[pkg]]
+      for ( func in functions ){ # get funcy!
+        # get function object from namespace
+        f <- tryCatch(getFromNamespace(func, pkg)
+            , error = function(e){
+                msg <- sprintf("Loading '%s' extensions failed with message:\n'%s'"
+                              , pkg, e$message)
+                warning(msg, call.=FALSE)
+              })
+  
+        # mask'm like there's no tomorrow 
+        envir[[func]] <- capture(f, output)
+      }
     }
+
     invisible(ext)
   }
 }
@@ -457,6 +487,8 @@ register_tinytest_extension <- function(pkg, functions){
 #' @param set_env \code{[named list]}. Key=value pairs of environment variables
 #' that will be set before the test file is run and reset afterwards. These are not
 #' counted as side effects of the code under scrutiny.
+#' @param encoding \code{[character]} Define encoding argument passed to \code{\link[base]{parse}}
+#'        when parsing \code{file}.
 #' @param ... Currently unused
 #' 
 #' @details
@@ -532,6 +564,7 @@ run_test_file <- function( file
                          , remove_side_effects = TRUE 
                          , side_effects = FALSE
                          , set_env = list()
+                         , encoding="unknown"
                          , ...){
 
   if (!file_test("-f", file)){
@@ -634,7 +667,7 @@ run_test_file <- function( file
 
   # parse file, store source reference.
   check_double_colon(filename=file)
-  parsed <- parse(file=file, keep.source=TRUE)
+  parsed <- parse(file=file, keep.source=TRUE, encoding=encoding)
   src <- attr(parsed, "srcref")
   o$file <- file
 
@@ -1043,6 +1076,7 @@ test_package <- function(pkgname, testdir = "tinytest", lib.loc=NULL
 #' @param at_home \code{[logical]} toggle local tests.
 #' @param ncpu \code{[numeric]} number of CPUs to use during the testing phase.
 #' @param verbose \code{[logical]} toggle verbosity during execution
+#' @param color   \code{[logical]} toggle colorize output
 #' @param remove_side_effects \code{[logical]} toggle remove user-defined side
 #'   effects? See section on side effects.
 #' @param side_effects \code{[logical|list]} Either a logical,
@@ -1054,6 +1088,7 @@ test_package <- function(pkgname, testdir = "tinytest", lib.loc=NULL
 #' @param keep_tempdir \code{[logical]} keep directory where the pkg is
 #'   installed and where tests are run? If \code{TRUE}, the directory is not
 #'   deleted and it's location is printed.
+#' @param encoding \code{[character]} Encoding parameter passed to \code{\link[base]{parse}}.
 #'
 #'
 #' @return A \code{tinytests} object.
@@ -1069,11 +1104,13 @@ build_install_test <- function(pkgdir="./", testdir="tinytest"
                              , pattern="^test.*\\.[rR]$"
                              , at_home=TRUE
                              , verbose=getOption("tt.verbose",2)
+                             , color=getOption("tt.pr.color",TRUE)
                              , ncpu = 1
                              , remove_side_effects=TRUE
                              , side_effects=FALSE
                              , lc_collate = getOption("tt.collate",NA)
-                             , keep_tempdir=FALSE){
+                             , keep_tempdir=FALSE
+                             , encoding="unknown"){
   oldwd <- getwd()
   tdir  <- tempfile()
   on.exit({setwd(oldwd)
@@ -1111,10 +1148,12 @@ suppressPackageStartupMessages({
   testdir <- '%s'
   at_home <- %s
   verbose <- %d
+  color   <- %s
   remove_side_effects <- %s
   side_effects <- %s
   ncpu    <- %d
   lc_collate <- %s
+  encoding <- '%s'
 
   #        pkgname       tdir
   library(pkgname, lib.loc=tdir,character.only=TRUE)
@@ -1132,10 +1171,12 @@ out <- run_test_dir(system.file(testdir, package=pkgname, lib.loc=tdir)
                    , at_home=at_home
                    , pattern=pattern
                    , verbose=verbose
+                   , color=as.logical(color)
                    , remove_side_effects=remove_side_effects
                    , side_effects=side_effects
                    , cluster=cluster
-                   , lc_collate=lc_collate)
+                   , lc_collate=lc_collate
+                   , encoding=encoding)
 
 saveRDS(out, file='output.RDS')
 
@@ -1148,10 +1189,12 @@ if (!is.null(cluster)) parallel::stopCluster(cluster)
         , testdir
         , at_home
         , verbose
+        , color
         , remove_side_effects
         , side_effects
         , ncpu
-        , lc_collate)
+        , lc_collate
+        , encoding)
 
   write(scr, file="test.R")
   system("Rscript test.R")

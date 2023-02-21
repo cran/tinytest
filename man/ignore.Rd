@@ -42,6 +42,8 @@ is exactly the same as that for \code{expect_true(1==1)}.
 \seealso{
 Other test-functions: 
 \code{\link{expect_equal_to_reference}()},
-\code{\link{expect_equal}()}
+\code{\link{expect_equal}()},
+\code{\link{expect_length}()},
+\code{\link{expect_match}()}
 }
 \concept{test-functions}

@@ -1,5 +1,6 @@
 ### A brief overview of `tinytest`
 
+See also the [Recording of my useR2021 talk](https://youtu.be/-PsaqMWfUIg?t=1104).
 
 #### Package setup
 
@@ -57,8 +58,10 @@ the second argument represents the _desired_ value.
 | `expect_equal`                   | Data and attributes of arguments must be equal       |
 | `expect_equivalent`              | Data of arguments must be equal                      |
 | `expect_identical`               | Target and current must be `identical`               |
+| `expect_length`                  | Check length of argument                             |
 | `expect_inherits`                | Current object must inherit from the desired class   |
 | `expect_null`                    | Expression must evaluate to `NULL`                   |
+| `expect_match`                   | String(s) must match a regular expression.           |
 | `expect_equal_to_reference`      | Object must be equal to an object stored on file     |
 | `expect_equivalent_to_reference` | Object must be equivalent to an object stored on file|
 | `expect_stdout`                  | Expect a printed message (via `print` or `cat`)      |
@@ -162,9 +165,11 @@ test results. The high-performance
 
 #### Skipping or ignoring tests 
 
-Use `exit_file()` to stop executing a test file, with an optional message.
+Use `exit_file()` or `exit_if_not()` to stop executing a test file, with an
+optional message.
 ```
 exit_file("I'm too tired to test today")
+exit_if_not(requireNamespace('slartibartfast', quietly=TRUE))
 ```
 
 Use `ignore(testfunction)` to run a test but not include the result in the output.
@@ -214,6 +219,11 @@ See the vignette.
 vignette("using_tinytest", package="tinytest")
 ```
 
+For the underlying method, see MPJ van der Loo (2021) _[A Method for Deriving
+Information from Running R
+Code](https://journal.r-project.org/articles/RJ-2021-056/)_ The R journal
+**13**(1). Or watch the [useR2020 talk](https://www.youtube.com/watch?v=55sP4ytE1uc)
+on the paper.
 
 
 

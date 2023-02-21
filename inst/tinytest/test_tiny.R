@@ -47,6 +47,13 @@ expect_true(ignore(expect_equivalent_to_reference)(xx, file=fl))
 expect_false(ignore(expect_equal_to_reference)(xx, file=fl))
 
 
+expect_true(ignore(expect_match)("foo", "o"))
+expect_false(ignore(expect_match)("foo","a"))
+expect_false(ignore(expect_match)(c("foo", "bar"),"o"))
+
+
+expect_true(ignore(expect_length)(1:2,2))
+expect_false(ignore(expect_length)(1:2,3))
 
 
 # reading from file
@@ -58,15 +65,17 @@ expect_equal(women, dat)
 expect_warning(warning("foo"))
 expect_error(stop("bar"))
 
-# class of error condition
-ec <- errorCondition(message="wa babalooba", class="foo")
-expect_false(ignore(expect_error)( stop(ec), class="bar" ))
-expect_true (ignore(expect_error)( stop(ec), class="foo" ))
+if (getRversion() >= "3.6.0") {
+  # class of error condition
+  ec <- errorCondition(message="wa babalooba", class="foo")
+  expect_false(ignore(expect_error)( stop(ec), class="bar"))
+  expect_true (ignore(expect_error)( stop(ec), class="foo"))
 
-# class of warning condition
-wc <- warningCondition(message="ba la bamboo", class="foo")
-expect_false(ignore(expect_warning)( warning(wc), class="bar"))
-expect_true (ignore(expect_warning)( warning(wc), class="foo"))
+  # class of warning condition
+  wc <- warningCondition(message="ba la bamboo", class="foo")
+  expect_false(ignore(expect_warning)( warning(wc), class="bar"))
+  expect_true (ignore(expect_warning)( warning(wc), class="foo"))
+}
 
 # messages to stdout
 expect_stdout(print("hihi"))

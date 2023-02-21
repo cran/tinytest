@@ -242,6 +242,8 @@ shortdiff <- function(current, target, ...){
 #' @param info \code{[character]} scalar. Optional user-defined message. Must
 #'  be a single character string. Multiline comments may be separated by
 #'  \code{"\\n"}.
+#' @param strict \code{[logical]} scalar. If set to \code{TRUE}, any exception 
+#'        worse than the wanted exception will cause the test to fail.
 #' @param ... Passed to \code{all.equal}
 #'
 #' @return A \code{\link{tinytest}} object. A tinytest object is a
@@ -253,6 +255,14 @@ shortdiff <- function(current, target, ...){
 #' Although the interface is not entirely the same, it is expected that
 #' this makes migration from the \code{RUnit} framework a little easier, for those
 #' who wish to do so.
+#'
+#' \code{expect_error}, \code{expect_warning} and \code{expect_message} will
+#' concatenate all messages when multiple exceptions are thrown, before
+#' matching the message to \code{pattern}.
+#' 
+#' When speccifying regular expression patterns for errors, warnings or messages,
+#' note that \code{\link[base]{message}} adds a LF character by default at the end
+#' of the message string. 
 #'
 #' @section More information and examples:
 #'
@@ -280,7 +290,71 @@ expect_equal <- function(current, target, tolerance = sqrt(.Machine$double.eps),
   tinytest(result = equal, call = sys.call(sys.parent(1)), diff=diff, short=short, info=info)
 }
 
+#' Check length of an object
+#'
+#' @param current \code{[object]} An R object with a length
+#' @param length \code{[integer]} A nonnegative integer
+#' @param info \code{[character]} scalar. Optional user-defined message. Must
+#'  be a single character string. Multiline comments may be separated by
+#' @param ... Currently not used.
+#' 
+#' @family test-functions
+#'
+#' @examples
+#' expect_length(3:4, 2) # TRUE
+#' expect_length(2:5, 1) # FALSE
+#'
+#' @export
+expect_length <- function(current, length, info=NA_character_,...){
+  ln <- length(current)
+  equal <- isTRUE(abs(ln - length) == 0)
+  diff <- if (equal) NA_character_ 
+          else sprintf("Expected object of length %d, got %s", length, ln)
+  short <- if (equal) NA_character_ else "data"
 
+  tinytest(result = equal, call=sys.call(sys.parent(1)), diff=diff, short=short, info=info) 
+}
+
+#' Match strings to a regular expression
+#'
+#' Results in \code{TRUE} only when all elements of current match the regular
+#' expression in \code{pattern}. Matching is done by \code{\link[base]{grepl}}. 
+#' 
+#' @param current \code{[character]} String(s) to check for \code{pattern}.
+#' @param pattern \code{[character]} A regular expression.
+#' @param info \code{[character]} scalar. Optional user-defined message. Must
+#'  be a single character string. Multiline comments may be separated by
+#'  \code{"\\n"}.
+#' @param ... passed to \code{\link[base]{grepl}}
+#'
+#'
+#'
+#' @examples
+#' expect_match("hello world", "world")                    # TRUE
+#' expect_match("hello world", "^world$")                  # FALSE
+#' expect_match("HelLO woRlD", "world", ignore.case=TRUE)  # TRUE
+#' expect_match(c("apple","banana"), "a")                  # TRUE
+#' expect_match(c("apple","banana"), "b")                  # FALSE
+#'
+#' @family test-functions 
+#' @export
+expect_match <- function(current, pattern, info=NA_character_, ...){
+  result <- grepl(pattern, current, ...)
+  out <- isTRUE(all(result))
+  diff <- if (out){ 
+    NA_character_
+  } else {
+    if (length(current)==1){
+      sprintf("Expected string that matches '%s', got '%s'.", pattern, current)
+    } else {
+      sprintf("Not all strings match pattern '%s', for example element [%d]: '%s'"
+         , pattern, which(!result)[1], current[which(!result)[1]])
+    }
+  }
+
+  short <- if (out) NA_character_ else "data"
+  tinytest(result=out, call=sys.call(sys.parent(1)), diff=diff, short=short, info=info)
+}
 
 #' @rdname expect_equal
 #' @export
@@ -478,8 +552,8 @@ expect_error <- function(current, pattern=".*", class="error", info=NA_character
             if (matches && isclass){
               result <<- TRUE
             } else if (!isclass){
-              diff <<- sprintf("Error of class '%s', does not inherit from '%s'"
-                              , paste(class(e), collapse=", "), class)
+              diff <<- sprintf("Error of class <%s>, does not inherit from <%s>"
+                              , paste(class(e), collapse=", "), paste(class,collapse=","))
             } else if (!matches){
               diff <<- sprintf("The error message:\n '%s'\n does not match pattern '%s'"
                               , e$message, pattern)
@@ -518,7 +592,8 @@ first_n <- function(L, n=3){
 
 #' @rdname expect_equal
 #' @export
-expect_warning <- function(current, pattern=".*", class="warning", info=NA_character_,...){
+expect_warning <- function(current, pattern=".*"
+                         , class="warning", info=NA_character_, strict=FALSE,...){
  
   messages <- list()
   warnings <- list()  
@@ -557,24 +632,34 @@ expect_warning <- function(current, pattern=".*", class="warning", info=NA_chara
     } else {
       n_right_class <- sum(sapply(warnings, function(w) inherits(w, class)))
       if (n_right_class == 0){
-        head <- sprintf("Found %d warning(s), but not of class '%s'.", nwrn, class)
+        head <- sprintf("Found %d warning(s), but not of class <%s>."
+                       , nwrn, paste(class,collapse=", "))
         head <- paste(head, "Showing up to three warnings:\n")
         body <- first_n(warnings)
         paste(head, body)
       } else {
         wrns <- Filter(function(w) inherits(w,class), warnings)
-        head <- sprintf("Found %d warnings(s) of class '%s', but not matching '%s'."
-                      , nwrn, class, pattern)
+        head <- sprintf("Found %d warnings(s) of class <%s>, but not matching '%s'."
+                      , nwrn, paste(class, collapse=", "), pattern)
         head <- paste(head,"\nShowing up to three warnings:\n")
         body <- first_n(wrns)
         paste(head, body) 
       }
     }
   }
+  
+  if (strict && nerr > 0){
+    result <- FALSE
+  }
 
-  if (!result && (nmsg > 0 || nerr > 0)) 
-    diff <- paste0(diff,sprintf("\nAlso found %d message(s) and %d error(s)"
-              , nmsg, nerr))
+  if (!result && (nmsg > 0 || nerr > 0)){ 
+    diff <- paste0(diff,sprintf("\nFound %d message(s), %d warning(s), and %d error(s):\n"
+              , nmsg, nwrn, nerr))
+    mm <- paste(sprintf("MSG: %s",sapply(messages, function(m) m$message)), collapse="\n")
+    ww <- paste(sprintf("WRN: %s",sapply(warnings, function(w) w$message)), collapse="\n")
+    ee <- paste(sprintf("\nERR: %s",sapply(errors, function(e) e$message)), collapse="\n")
+    diff <- paste(diff,mm,ww,ee)
+  }
 
   tinytest(result, call=sys.call(sys.parent(1))
           , short=short, diff=diff, info=info)
@@ -584,7 +669,8 @@ expect_warning <- function(current, pattern=".*", class="warning", info=NA_chara
 
 #' @rdname expect_equal
 #' @export
-expect_message <- function(current, pattern=".*", class="message", info=NA_character_, ...){
+expect_message <- function(current, pattern=".*"
+                , class="message", info=NA_character_, strict=FALSE, ...){
  
   messages <- list()
   warnings <- list()  
@@ -623,14 +709,15 @@ expect_message <- function(current, pattern=".*", class="message", info=NA_chara
     } else {
       n_right_class <- sum(sapply(messages, function(m) inherits(m, class)))
       if (n_right_class == 0){
-        head <- sprintf("Found %d message(s), but not of class '%s'.", nmsg, class)
+        head <- sprintf("Found %d message(s), but not of class <%s>."
+                        , nmsg, paste(class,collapse=", "))
         head <- paste(head, "Showing up to three messages:\n")
         body <- first_n(messages)
         paste(head, body)
       } else {
         msgs <- Filter(function(m) inherits(m,class), messages)
-        head <- sprintf("Found %d message(s) of class '%s', but not matching '%s'."
-                      , nmsg, class, pattern)
+        head <- sprintf("Found %d message(s) of class <%s>, but not matching '%s'."
+                      , nmsg, paste(class, collapse=", "), pattern)
         head <- paste(head,"\nShowing up to three messages:\n")
         body <- first_n(msgs)
         paste(head, body) 
@@ -638,9 +725,18 @@ expect_message <- function(current, pattern=".*", class="message", info=NA_chara
     }
   }
 
-  if (!result && (nwrn > 0 || nerr > 0)) 
-    diff <- paste0(diff,sprintf("\nAlso found %d warning(s) and %d error(s)"
-              , nwrn, nerr))
+  if (strict && (nwrn >0 || nerr > 0)){
+    result <- FALSE
+  }
+
+  if (!result && (nwrn > 0 || nerr > 0)){ 
+    diff <- paste0(diff,sprintf("\nFound %d message(s), %d warning(s), and %d error(s):\n"
+              , nmsg, nwrn, nerr))
+    mm <- paste(sprintf("MSG: %s",sapply(messages, function(m) m$message)), collapse="\n")
+    ww <- paste(sprintf("WRN: %s",sapply(warnings, function(w) w$message)), collapse="\n")
+    ee <- paste(sprintf("\nERR: %s",sapply(errors, function(e) e$message)), collapse="\n")
+    diff <- paste(diff,mm,ww,ee)
+  }
 
   tinytest(result, call=sys.call(sys.parent(1))
           , short=short, diff=diff, info=info)
@@ -705,11 +801,6 @@ expect_stdout <- function(current, pattern=".*", info=NA_character_, ...){
 #' builds and tests it in a separate R session in the background. This means
 #' that if you create a file located at \code{tempfile()} during the run, this
 #' file is destroyed when the separate R session is closed.
-#'
-#' \code{expect_error}, \code{expect_warning} and \code{expect_message} will
-#' concatenate all messages when multiple exceptions are thrown, before
-#' matching the message to \code{pattern}.
-#' 
 #'
 #'
 #' @family test-functions

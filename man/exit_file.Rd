@@ -2,22 +2,32 @@
 % Please edit documentation in R/tinytest.R
 \name{exit_file}
 \alias{exit_file}
-\title{Stop testing}
+\alias{exit_if_not}
+\title{Stop testing (conditionally)}
 \usage{
 exit_file(msg = "")
+
+exit_if_not(...)
 }
 \arguments{
 \item{msg}{\code{[character]} An optional message to print after exiting.}
+
+\item{...}{A comma-separated list of conditions.}
 }
 \value{
 The exit message
 }
 \description{
-Call this function to exit a test file.
+Use \code{exit_file} to exit a file with a custom message, or use
+\code{exit_if} to exit if one or more conditions are met. \code{exit_if}
+will create a message akin to messages created by \code{\link[base]{stopifnot}}.
 }
 \examples{
 exit_file("I'm too tired to test")
-
+exit_if_not(packageVersion("tinytest")  >= "1.0.0")
+\dontrun{
+exit_if_not(requireNamespace("foo",quietly=TRUE))
+}
 }
 \seealso{
 Other test-files: 
