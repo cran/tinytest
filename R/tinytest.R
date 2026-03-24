@@ -207,7 +207,7 @@ exit_file <- function(msg="") msg
 capture_exit <- function(fun, env){
   function(...){
     out <- fun(...)
-    env$exit <- TRUE
+    if (!is.null(out)) env$exit <- TRUE
     if (is.character(out)){
       env$exitmsg <- out
     } else {
@@ -316,6 +316,7 @@ add_locally_masked_functions <- function(envir, output){
   envir$expect_equivalent_to_reference <- capture(expect_equivalent_to_reference, output)
   envir$exit_file           <- capture_exit(exit_file, output)
   envir$exit_if_not         <- capture_exit(exit_if_not, output)
+  envir$expect_match        <- capture(expect_match, output)
   envir$ignore              <- ignore
   envir$at_home             <- tinytest::at_home
 
@@ -779,7 +780,7 @@ print_status <- function(filename, env, color, print=TRUE){
 
 #' Run all tests in a directory
 #'
-#' \code{run\_test\_dir} runs all test files in a directory.
+#' \code{run_test_dir} runs all test files in a directory.
 #'
 #'
 #' @param dir \code{[character]} path to directory

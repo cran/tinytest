@@ -26,8 +26,8 @@ expect_length(2:5, 1) # FALSE
 }
 \seealso{
 Other test-functions: 
-\code{\link{expect_equal_to_reference}()},
 \code{\link{expect_equal}()},
+\code{\link{expect_equal_to_reference}()},
 \code{\link{expect_match}()},
 \code{\link{ignore}()}
 }

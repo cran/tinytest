@@ -31,8 +31,8 @@ expect_match(c("apple","banana"), "b")                  # FALSE
 }
 \seealso{
 Other test-functions: 
-\code{\link{expect_equal_to_reference}()},
 \code{\link{expect_equal}()},
+\code{\link{expect_equal_to_reference}()},
 \code{\link{expect_length}()},
 \code{\link{ignore}()}
 }

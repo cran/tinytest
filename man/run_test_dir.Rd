@@ -55,7 +55,7 @@ stored.}
 A \code{tinytests} object
 }
 \description{
-\code{run\_test\_dir} runs all test files in a directory.
+\code{run_test_dir} runs all test files in a directory.
 
 \code{test_all} is a convenience function for package development, that
 wraps \code{run_test_dir}. By default, it runs all files starting with

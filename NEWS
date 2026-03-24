@@ -1,3 +1,17 @@
+version 1.4.3
+- tt.pr.color is now set to FALSE when the NO_COLOR environment
+  variable is set. See https://no-color.org/
+- expect_<condition> now uses conditionMessage internally. This
+  should increase compatibility with packages defining custom
+  conditions. (thanks to Tim Taylor for suggesting and Etienne Bacher
+  for reporting)
+- expect_match is now available when testing packages (thanks to 
+  Tim Taylor for the PR and Marcel Ramos for reporting)
+- fix in pattern matching for warnings (thanks for Matthijs Berends
+  for the PR)
+- Fixed exit_if_not() that would always exit (thanks to Vincent 
+  Arel-Bundock for reporting)
+
 version 1.4.1
 - expect_warning and expect_message gain argument 'strict'. This toggles
   between failing when an exception worse than the expected one is thrown.
